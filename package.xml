@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>moveit_drake</name>
+  <version>0.0.1</version>
+  <description>Experimental MoveIt Drake integration</description>
+  <author email="sebastian.jahr@picknik.ai">Sebastian Jahr</author>
+  <maintainer email="sebastian.jahr@picknik.ai">Sebastian Jahr</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+      <build_type>ament_cmake</build_type>
+  </export>
+</package>
