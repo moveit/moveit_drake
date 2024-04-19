@@ -35,7 +35,7 @@
 /* Author: Sebastian Jahr */
 
 #include <moveit_msgs/srv/get_position_ik.hpp>
-#include <moveit/drake/diff_ik_plugin.hpp>
+#include <moveit/drake/global_ik_plugin.hpp>
 #include <class_loader/class_loader.hpp>
 #include <moveit/utils/logger.hpp>
 
@@ -44,45 +44,39 @@
 #include <Eigen/Geometry>
 
 // register SRVKinematics as a KinematicsBase implementation
-CLASS_LOADER_REGISTER_CLASS(diff_ik_plugin::DifferentialIKPlugin, kinematics::KinematicsBase)
+CLASS_LOADER_REGISTER_CLASS(global_ik_plugin::GlobalIKPlugin, kinematics::KinematicsBase)
 
-namespace diff_ik_plugin
+namespace global_ik_plugin
 {
 namespace
 {
 rclcpp::Logger getLogger()
 {
-  return moveit::getLogger("moveit.kinematics.diff_ik_plugin");
+  return moveit::getLogger("moveit.kinematics.global_ik_plugin");
 }
 }  // namespace
 
-DifferentialIKPlugin::DifferentialIKPlugin() : active_(false)
+GlobalIKPlugin::GlobalIKPlugin()
 {
 }
 
-bool DifferentialIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const moveit::core::RobotModel& robot_model,
-                                      const std::string& group_name, const std::string& base_frame,
-                                      const std::vector<std::string>& tip_frames, double search_discretization)
-{
-  // TODO
-  return true;
-}
-
-bool DifferentialIKPlugin::setRedundantJoints(const std::vector<unsigned int>& redundant_joints)
+bool GlobalIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const moveit::core::RobotModel& robot_model,
+                                const std::string& group_name, const std::string& base_frame,
+                                const std::vector<std::string>& tip_frames, double search_discretization)
 {
   // TODO
   return true;
 }
 
-bool DifferentialIKPlugin::timedOut(const rclcpp::Time& start_time, double duration) const
+bool GlobalIKPlugin::setRedundantJoints(const std::vector<unsigned int>& redundant_joints)
 {
-  return ((node_->now() - start_time).seconds() >= duration);
+  // TODO
+  return true;
 }
 
-bool DifferentialIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose,
-                                         const std::vector<double>& ik_seed_state, std::vector<double>& solution,
-                                         moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                         const kinematics::KinematicsQueryOptions& options) const
+bool GlobalIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+                                   std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                   const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
 
@@ -90,11 +84,10 @@ bool DifferentialIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose
                           error_code, options);
 }
 
-bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose,
-                                            const std::vector<double>& ik_seed_state, double timeout,
-                                            std::vector<double>& solution,
-                                            moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                            const kinematics::KinematicsQueryOptions& options) const
+bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+                                      double timeout, std::vector<double>& solution,
+                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                      const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
 
@@ -102,34 +95,31 @@ bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_p
                           options);
 }
 
-bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose,
-                                            const std::vector<double>& ik_seed_state, double timeout,
-                                            const std::vector<double>& consistency_limits,
-                                            std::vector<double>& solution,
-                                            moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                            const kinematics::KinematicsQueryOptions& options) const
+bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+                                      double timeout, const std::vector<double>& consistency_limits,
+                                      std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                      const kinematics::KinematicsQueryOptions& options) const
 {
   return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, IKCallbackFn(), error_code,
                           options);
 }
 
-bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose,
-                                            const std::vector<double>& ik_seed_state, double timeout,
-                                            std::vector<double>& solution, const IKCallbackFn& solution_callback,
-                                            moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                            const kinematics::KinematicsQueryOptions& options) const
+bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+                                      double timeout, std::vector<double>& solution,
+                                      const IKCallbackFn& solution_callback,
+                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                      const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
   return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, solution_callback, error_code,
                           options);
 }
 
-bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose,
-                                            const std::vector<double>& ik_seed_state, double timeout,
-                                            const std::vector<double>& consistency_limits,
-                                            std::vector<double>& solution, const IKCallbackFn& solution_callback,
-                                            moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                            const kinematics::KinematicsQueryOptions& options) const
+bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+                                      double timeout, const std::vector<double>& consistency_limits,
+                                      std::vector<double>& solution, const IKCallbackFn& solution_callback,
+                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                      const kinematics::KinematicsQueryOptions& options) const
 {
   // Convert single pose into a vector of one pose
   std::vector<geometry_msgs::msg::Pose> ik_poses;
@@ -139,22 +129,14 @@ bool DifferentialIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_p
                           options);
 }
 
-bool DifferentialIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses,
-                                            const std::vector<double>& ik_seed_state, double /*timeout*/,
-                                            const std::vector<double>& /*consistency_limits*/,
-                                            std::vector<double>& solution, const IKCallbackFn& solution_callback,
-                                            moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                            const kinematics::KinematicsQueryOptions& /*options*/,
-                                            const moveit::core::RobotState* /*context_state*/) const
+bool GlobalIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses,
+                                      const std::vector<double>& ik_seed_state, double /*timeout*/,
+                                      const std::vector<double>& /*consistency_limits*/, std::vector<double>& solution,
+                                      const IKCallbackFn& solution_callback,
+                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                      const kinematics::KinematicsQueryOptions& /*options*/,
+                                      const moveit::core::RobotState* /*context_state*/) const
 {
-  // Check if active
-  if (!active_)
-  {
-    RCLCPP_ERROR(getLogger(), "kinematics not active");
-    error_code.val = error_code.NO_IK_SOLUTION;
-    return false;
-  }
-
   // Check if seed state correct
   if (ik_seed_state.size() != dimension_)
   {
@@ -179,19 +161,13 @@ bool DifferentialIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg
   return true;
 }
 
-bool DifferentialIKPlugin::getPositionFK(const std::vector<std::string>& link_names,
-                                         const std::vector<double>& joint_angles,
-                                         std::vector<geometry_msgs::msg::Pose>& poses) const
+bool GlobalIKPlugin::getPositionFK(const std::vector<std::string>& link_names, const std::vector<double>& joint_angles,
+                                   std::vector<geometry_msgs::msg::Pose>& poses) const
 {
-  if (!active_)
-  {
-    RCLCPP_ERROR(getLogger(), "kinematics not active");
-    return false;
-  }
   poses.resize(link_names.size());
   if (joint_angles.size() != dimension_)
   {
-    RCLCPP_ERROR(getLogger(), "Joint angles vector must have size: %d", dimension_);
+    RCLCPP_ERROR(getLogger(), "Joint angles vector must have size: %ld", dimension_);
     return false;
   }
 
@@ -200,4 +176,4 @@ bool DifferentialIKPlugin::getPositionFK(const std::vector<std::string>& link_na
 
   return false;
 }
-}  // namespace diff_ik_plugin
+}  // namespace global_ik_plugin

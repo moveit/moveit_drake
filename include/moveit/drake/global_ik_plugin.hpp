@@ -39,7 +39,6 @@
 
 // ROS2
 #include <rclcpp/rclcpp.hpp>
-#include <srv_kinematics_parameters.hpp>
 
 // System
 #include <memory>
@@ -53,15 +52,18 @@
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/robot_state/robot_state.h>
 
-namespace diff_ik_plugin
+// Drake
+#include <drake/multibody/inverse_kinematics/global_inverse_kinematics.h>
+
+namespace global_ik_plugin
 {
 /**
  * @brief TODO
  */
-class DifferentialIKPlugin : public kinematics::KinematicsBase
+class GlobalIKPlugin : public kinematics::KinematicsBase
 {
 public:
-  DifferentialIKPlugin();
+  GlobalIKPlugin();
 
   bool
   getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
@@ -121,5 +123,8 @@ public:
 
 protected:
   bool setRedundantJoints(const std::vector<unsigned int>& redundant_joint_indices) override;
+
+private:
+  size_t dimension_ = 0;
 };
-}  // namespace diff_ik_plugin
+}  // namespace global_ik_plugin
