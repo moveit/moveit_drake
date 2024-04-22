@@ -52,18 +52,15 @@
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/robot_state/robot_state.h>
 
-// Drake
-#include <drake/multibody/inverse_kinematics/global_inverse_kinematics.h>
-
-namespace global_ik_plugin
+namespace diff_ik_plugin
 {
 /**
  * @brief TODO
  */
-class GlobalIKPlugin : public kinematics::KinematicsBase
+class DiffIKPlugin : public kinematics::KinematicsBase
 {
 public:
-  GlobalIKPlugin();
+  DiffIKPlugin();
 
   bool
   getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
@@ -116,15 +113,7 @@ public:
    */
   const std::vector<std::string>& getLinkNames() const override;
 
-  /**
-   * @brief  Return all the variable names in the order they are represented internally
-   */
-  const std::vector<std::string>& getVariableNames() const;
-
 protected:
   bool setRedundantJoints(const std::vector<unsigned int>& redundant_joint_indices) override;
-
-private:
-  size_t dimension_ = 0;
 };
-}  // namespace global_ik_plugin
+}  // namespace diff_ik_plugin

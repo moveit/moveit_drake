@@ -36,12 +36,12 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 
 include_directories(include)
 
-add_library(moveit_global_ik_plugin SHARED src/global_ik_plugin.cpp)
+add_library(moveit_diff_ik_plugin SHARED src/diff_ik_plugin.cpp)
 
-ament_target_dependencies(moveit_global_ik_plugin rclcpp pluginlib moveit_core
+ament_target_dependencies(moveit_diff_ik_plugin rclcpp pluginlib moveit_core
                           moveit_msgs EIGEN3)
 
-target_link_libraries(moveit_global_ik_plugin drake::drake)
+target_link_libraries(moveit_diff_ik_plugin drake::drake)
 
 add_subdirectory(demo)
 

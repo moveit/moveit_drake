@@ -35,7 +35,7 @@
 /* Author: Sebastian Jahr */
 
 #include <moveit_msgs/srv/get_position_ik.hpp>
-#include <moveit/drake/global_ik_plugin.hpp>
+#include <moveit/drake/diff_ik_plugin.hpp>
 #include <class_loader/class_loader.hpp>
 #include <moveit/utils/logger.hpp>
 
@@ -43,24 +43,29 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-// register SRVKinematics as a KinematicsBase implementation
-CLASS_LOADER_REGISTER_CLASS(global_ik_plugin::GlobalIKPlugin, kinematics::KinematicsBase)
+// Drake
+#include <drake/multibody/inverse_kinematics/differential_inverse_kinematics.h>
 
-namespace global_ik_plugin
+// register SRVKinematics as a KinematicsBase implementation
+CLASS_LOADER_REGISTER_CLASS(diff_ik_plugin::DiffIKPlugin, kinematics::KinematicsBase)
+
+namespace diff_ik_plugin
 {
+
+using namespace drake::multibody;
 namespace
 {
 rclcpp::Logger getLogger()
 {
-  return moveit::getLogger("moveit.kinematics.global_ik_plugin");
+  return moveit::getLogger("moveit.kinematics.diff_ik_plugin");
 }
 }  // namespace
 
-GlobalIKPlugin::GlobalIKPlugin()
+DiffIKPlugin::DiffIKPlugin()
 {
 }
 
-bool GlobalIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const moveit::core::RobotModel& robot_model,
+bool DiffIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const moveit::core::RobotModel& robot_model,
                                 const std::string& group_name, const std::string& base_frame,
                                 const std::vector<std::string>& tip_frames, double search_discretization)
 {
@@ -68,13 +73,13 @@ bool GlobalIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const movei
   return true;
 }
 
-bool GlobalIKPlugin::setRedundantJoints(const std::vector<unsigned int>& redundant_joints)
+bool DiffIKPlugin::setRedundantJoints(const std::vector<unsigned int>& redundant_joints)
 {
   // TODO
   return true;
 }
 
-bool GlobalIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+bool DiffIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
                                    std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
                                    const kinematics::KinematicsQueryOptions& options) const
 {
@@ -84,7 +89,7 @@ bool GlobalIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, cons
                           error_code, options);
 }
 
-bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
                                       double timeout, std::vector<double>& solution,
                                       moveit_msgs::msg::MoveItErrorCodes& error_code,
                                       const kinematics::KinematicsQueryOptions& options) const
@@ -95,7 +100,7 @@ bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, c
                           options);
 }
 
-bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
                                       double timeout, const std::vector<double>& consistency_limits,
                                       std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
                                       const kinematics::KinematicsQueryOptions& options) const
@@ -104,7 +109,7 @@ bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, c
                           options);
 }
 
-bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
                                       double timeout, std::vector<double>& solution,
                                       const IKCallbackFn& solution_callback,
                                       moveit_msgs::msg::MoveItErrorCodes& error_code,
@@ -115,7 +120,7 @@ bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, c
                           options);
 }
 
-bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
+bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
                                       double timeout, const std::vector<double>& consistency_limits,
                                       std::vector<double>& solution, const IKCallbackFn& solution_callback,
                                       moveit_msgs::msg::MoveItErrorCodes& error_code,
@@ -129,7 +134,7 @@ bool GlobalIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, c
                           options);
 }
 
-bool GlobalIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses,
+bool DiffIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses,
                                       const std::vector<double>& ik_seed_state, double /*timeout*/,
                                       const std::vector<double>& /*consistency_limits*/, std::vector<double>& solution,
                                       const IKCallbackFn& solution_callback,
@@ -137,31 +142,12 @@ bool GlobalIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose
                                       const kinematics::KinematicsQueryOptions& /*options*/,
                                       const moveit::core::RobotState* /*context_state*/) const
 {
-  // Check if seed state correct
-  if (ik_seed_state.size() != dimension_)
-  {
-    RCLCPP_ERROR_STREAM(getLogger(),
-                        "Seed state must have size " << dimension_ << " instead of size " << ik_seed_state.size());
-    error_code.val = error_code.NO_IK_SOLUTION;
-    return false;
-  }
-
-  // Check that we have the same number of poses as tips
-  if (tip_frames_.size() != ik_poses.size())
-  {
-    RCLCPP_ERROR_STREAM(getLogger(), "Mismatched number of pose requests (" << ik_poses.size() << ") to tip frames ("
-                                                                            << tip_frames_.size()
-                                                                            << ") in searchPositionIK");
-    error_code.val = error_code.NO_IK_SOLUTION;
-    return false;
-  }
-
   // TODO
   RCLCPP_INFO(getLogger(), "IK Solver Succeeded!");
   return true;
 }
 
-bool GlobalIKPlugin::getPositionFK(const std::vector<std::string>& link_names, const std::vector<double>& joint_angles,
+bool DiffIKPlugin::getPositionFK(const std::vector<std::string>& link_names, const std::vector<double>& joint_angles,
                                    std::vector<geometry_msgs::msg::Pose>& poses) const
 {
   poses.resize(link_names.size());
@@ -176,4 +162,4 @@ bool GlobalIKPlugin::getPositionFK(const std::vector<std::string>& link_names, c
 
   return false;
 }
-}  // namespace global_ik_plugin
+}  // namespace diff_ik_plugin
