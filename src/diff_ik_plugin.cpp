@@ -66,8 +66,8 @@ DiffIKPlugin::DiffIKPlugin()
 }
 
 bool DiffIKPlugin::initialize(const rclcpp::Node::SharedPtr& node, const moveit::core::RobotModel& robot_model,
-                                const std::string& group_name, const std::string& base_frame,
-                                const std::vector<std::string>& tip_frames, double search_discretization)
+                              const std::string& group_name, const std::string& base_frame,
+                              const std::vector<std::string>& tip_frames, double search_discretization)
 {
   // TODO
   return true;
@@ -80,8 +80,8 @@ bool DiffIKPlugin::setRedundantJoints(const std::vector<unsigned int>& redundant
 }
 
 bool DiffIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
-                                   std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                   const kinematics::KinematicsQueryOptions& options) const
+                                 std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                 const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
 
@@ -90,9 +90,9 @@ bool DiffIKPlugin::getPositionIK(const geometry_msgs::msg::Pose& ik_pose, const 
 }
 
 bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
-                                      double timeout, std::vector<double>& solution,
-                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                      const kinematics::KinematicsQueryOptions& options) const
+                                    double timeout, std::vector<double>& solution,
+                                    moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                    const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
 
@@ -101,19 +101,19 @@ bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, con
 }
 
 bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
-                                      double timeout, const std::vector<double>& consistency_limits,
-                                      std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                      const kinematics::KinematicsQueryOptions& options) const
+                                    double timeout, const std::vector<double>& consistency_limits,
+                                    std::vector<double>& solution, moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                    const kinematics::KinematicsQueryOptions& options) const
 {
   return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, IKCallbackFn(), error_code,
                           options);
 }
 
 bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
-                                      double timeout, std::vector<double>& solution,
-                                      const IKCallbackFn& solution_callback,
-                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                      const kinematics::KinematicsQueryOptions& options) const
+                                    double timeout, std::vector<double>& solution,
+                                    const IKCallbackFn& solution_callback,
+                                    moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                    const kinematics::KinematicsQueryOptions& options) const
 {
   std::vector<double> consistency_limits;
   return searchPositionIK(ik_pose, ik_seed_state, timeout, consistency_limits, solution, solution_callback, error_code,
@@ -121,10 +121,10 @@ bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, con
 }
 
 bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, const std::vector<double>& ik_seed_state,
-                                      double timeout, const std::vector<double>& consistency_limits,
-                                      std::vector<double>& solution, const IKCallbackFn& solution_callback,
-                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                      const kinematics::KinematicsQueryOptions& options) const
+                                    double timeout, const std::vector<double>& consistency_limits,
+                                    std::vector<double>& solution, const IKCallbackFn& solution_callback,
+                                    moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                    const kinematics::KinematicsQueryOptions& options) const
 {
   // Convert single pose into a vector of one pose
   std::vector<geometry_msgs::msg::Pose> ik_poses;
@@ -135,20 +135,74 @@ bool DiffIKPlugin::searchPositionIK(const geometry_msgs::msg::Pose& ik_pose, con
 }
 
 bool DiffIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>& ik_poses,
-                                      const std::vector<double>& ik_seed_state, double /*timeout*/,
-                                      const std::vector<double>& /*consistency_limits*/, std::vector<double>& solution,
-                                      const IKCallbackFn& solution_callback,
-                                      moveit_msgs::msg::MoveItErrorCodes& error_code,
-                                      const kinematics::KinematicsQueryOptions& /*options*/,
-                                      const moveit::core::RobotState* /*context_state*/) const
+                                    const std::vector<double>& ik_seed_state, double /*timeout*/,
+                                    const std::vector<double>& /*consistency_limits*/, std::vector<double>& solution,
+                                    const IKCallbackFn& solution_callback,
+                                    moveit_msgs::msg::MoveItErrorCodes& error_code,
+                                    const kinematics::KinematicsQueryOptions& /*options*/,
+                                    const moveit::core::RobotState* /*context_state*/) const
 {
   // TODO
+  using namespace drake::multibody;
+
+  // TODO: This explicitly assumes that num_positions == num_velocities, which
+  // would not be true in the case of e.g. quaternion axes. How does MoveIt
+  // handle a reduced-DoF tangent space?
+  const size_t N = joint_model_group_->getActiveVariableCount();
+
+  Eigen::VectorXd q_current;
+  current_state_->copyJointGroupPositions(joint_model_group_, q_current);
+
+  Eigen::VectorXd v_current;
+  current_state_->copyJointGroupVelocities(joint_model_group_, v_current);
+
+  // TODO: Unclear the exact specifications of this Jacobian: w.r.t. what
+  // reference frame? Analytical or geometric Jacobian? Seems to work OK but
+  // should be clarified.
+  const Eigen::MatrixXd& J = jacobian;
+
+  // TODO: The DoDifferentialInverseKinematics function can handle many
+  // addition costs and constraints, e.g.:
+  // - joint position limits
+  // - end-effector velocity/acceleration constraints
+  // - nominal posture/centering cost
+  DifferentialInverseKinematicsParameters params(N, N);
+
+  // TODO: How do I get the real value from MoveIt?
+  // params.set_time_step(0.01);
+
+  // TODO: Hardcoded velocity and acceleration limits for demonstration
+  // purposes. These should be drawn from the MoveIt/Servo configuration
+  // instead.
+  const Eigen::VectorXd v_max = Eigen::VectorXd::Constant(N, 1.0);
+  const Eigen::VectorXd vdot_max = Eigen::VectorXd::Constant(N, 1.0);
+  params.set_joint_velocity_limits({ -v_max, v_max });
+  params.set_joint_acceleration_limits({ -vdot_max, vdot_max });
+
+  const auto result = DoDifferentialInverseKinematics(q_current, v_current, delta_x, J, params);
+  if (result.status == DifferentialInverseKinematicsStatus::kSolutionFound)
+  {
+    delta_theta_ = *result.joint_velocities;
+  }
+  else if (result.status == DifferentialInverseKinematicsStatus::kStuck)
+  {
+    // TODO: In this result joint velocities are still generated, they are
+    // just not guaranteed to follow the Cartesian target velocity. Is it
+    // acceptable to still use them? It may be the only way to get unstuck.
+    RCLCPP_WARN(LOGGER, "Differential inverse kinematics is stuck!");
+    return false;
+  }
+  else if (result.status == DifferentialInverseKinematicsStatus::kNoSolutionFound)
+  {
+    RCLCPP_WARN(LOGGER, "Differential inverse kinematics failed to converge to a solution!");
+    return false;
+  }
   RCLCPP_INFO(getLogger(), "IK Solver Succeeded!");
   return true;
 }
 
 bool DiffIKPlugin::getPositionFK(const std::vector<std::string>& link_names, const std::vector<double>& joint_angles,
-                                   std::vector<geometry_msgs::msg::Pose>& poses) const
+                                 std::vector<geometry_msgs::msg::Pose>& poses) const
 {
   poses.resize(link_names.size());
   if (joint_angles.size() != dimension_)
