@@ -140,10 +140,12 @@ bool DiffIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>&
                                     const IKCallbackFn& solution_callback,
                                     moveit_msgs::msg::MoveItErrorCodes& error_code,
                                     const kinematics::KinematicsQueryOptions& /*options*/,
-                                    const moveit::core::RobotState* /*context_state*/) const
+                                    const moveit::core::RobotState* context_state) const
 {
   // TODO
   using namespace drake::multibody;
+
+  // TODO Use multibody plant?
 
   // TODO: This explicitly assumes that num_positions == num_velocities, which
   // would not be true in the case of e.g. quaternion axes. How does MoveIt
@@ -155,11 +157,6 @@ bool DiffIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>&
 
   Eigen::VectorXd v_current;
   current_state_->copyJointGroupVelocities(joint_model_group_, v_current);
-
-  // TODO: Unclear the exact specifications of this Jacobian: w.r.t. what
-  // reference frame? Analytical or geometric Jacobian? Seems to work OK but
-  // should be clarified.
-  const Eigen::MatrixXd& J = jacobian;
 
   // TODO: The DoDifferentialInverseKinematics function can handle many
   // addition costs and constraints, e.g.:
@@ -179,25 +176,43 @@ bool DiffIKPlugin::searchPositionIK(const std::vector<geometry_msgs::msg::Pose>&
   params.set_joint_velocity_limits({ -v_max, v_max });
   params.set_joint_acceleration_limits({ -vdot_max, vdot_max });
 
-  const auto result = DoDifferentialInverseKinematics(q_current, v_current, delta_x, J, params);
-  if (result.status == DifferentialInverseKinematicsStatus::kSolutionFound)
+  double error = std::numeric_limits<double>::infinity();
+  // TODO: Expose as parameter + redefine termination criteria
+  while (error > 0.1)
   {
-    delta_theta_ = *result.joint_velocities;
+    // Error between target pose and FK of current pose
+
+    // Calculate Jacobian
+    // TODO: Unclear the exact specifications of this Jacobian: w.r.t. what
+    // reference frame? Analytical or geometric Jacobian? Seems to work OK but
+    // should be clarified.
+    const Eigen::MatrixXd& jacobian;
+    context_state.getJacobian(joint_model_group_ /* reference position? */);
+
+    // Calculate generalized velocities
+    const auto result = DoDifferentialInverseKinematics(q_current, v_current, error, jacobian, params);
+
+    // Process result
+    switch (result.status)
+    {
+      case DifferentialInverseKinematicsStatus::kSolutionFound:
+        // Update
+        break;
+
+      case DifferentialInverseKinematicsStatus::kNoSolutionFound:
+        RCLCPP_WARN(LOGGER, "Differential inverse kinematics failed to converge to a solution!");
+        return false;
+      case DifferentialInverseKinematicsStatus::kStuck:
+        // TODO: In this result joint velocities are still generated, they are
+        // just not guaranteed to follow the Cartesian target velocity. Is it
+        // acceptable to still use them? It may be the only way to get unstuck.
+        RCLCPP_WARN(LOGGER, "Differential inverse kinematics is stuck, likely due to constraints.!");
+        return false;
+    }
   }
-  else if (result.status == DifferentialInverseKinematicsStatus::kStuck)
-  {
-    // TODO: In this result joint velocities are still generated, they are
-    // just not guaranteed to follow the Cartesian target velocity. Is it
-    // acceptable to still use them? It may be the only way to get unstuck.
-    RCLCPP_WARN(LOGGER, "Differential inverse kinematics is stuck!");
-    return false;
-  }
-  else if (result.status == DifferentialInverseKinematicsStatus::kNoSolutionFound)
-  {
-    RCLCPP_WARN(LOGGER, "Differential inverse kinematics failed to converge to a solution!");
-    return false;
-  }
-  RCLCPP_INFO(getLogger(), "IK Solver Succeeded!");
+
+  // Store result in solution
+
   return true;
 }
 
@@ -211,7 +226,7 @@ bool DiffIKPlugin::getPositionFK(const std::vector<std::string>& link_names, con
     return false;
   }
 
-  // TODO
+  // TODO Implement FK
   RCLCPP_ERROR(getLogger(), "Forward kinematics not implemented");
 
   return false;
