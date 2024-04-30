@@ -3,8 +3,8 @@
   <name>moveit_drake</name>
   <version>0.0.1</version>
   <description>Experimental MoveIt Drake integration</description>
-  <author email="mike@picknik.ai">Mike Lautman</author>
-  <maintainer email="mike@picknik.ai">Mike Lautman</maintainer>
+  <author email="sebastian.jahr@picknik.ai">Sebastian Jahr</author>
+  <maintainer email="sebastian.jahr@picknik.ai">Sebastian Jahr</maintainer>
 
   <license>BSD</license>
 
