@@ -22,7 +22,7 @@ container with the following and create shell access.
     docker-compose -f .docker/docker-compose.yaml up
     docker exec -it moveit_drake bash
 
-Follow [instructions](### Build `moveit_drake`) below to build `moveit_drake`
+Follow [instructions](#build-moveit_drake) below to build `moveit_drake`
 
 
 ## Installation
