@@ -1,0 +1,25 @@
+version: "3.2"
+
+services: 
+  moveit:
+    image: moveit_drake:latest
+    container_name: moveit_drake
+    build: 
+      context: ../
+      dockerfile: .docker/Dockerfile
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=${DOCKER_XAUTH}
+    volumes:
+      - /tmp/.X11-unix:/tml/.X11-unix:rw
+      - ${DOCKER_XAUTH}:${DOCKER_XAUTH}
+      - type: bind
+        source: ../
+        target: /root/workspace/src/moveit_drake/
+    devices:
+      - "/dev:/dev"
+    privileged: true
+    tty: true
+    stdin_open: true
+    network_mode: "host"
+    command: /bin/bash
