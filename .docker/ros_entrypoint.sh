@@ -2,7 +2,7 @@
 
 # setup ros2 environment
 source "/opt/ros/$ROS_DISTRO/setup.bash" --
-source "$ROS_UNDERLAY/setup.bash" --
+source "${WORKSPACE}/install/setup.bash" --
 
-# excute docker command
+# execute docker command
 exec "$@"
