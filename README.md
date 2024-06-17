@@ -14,18 +14,18 @@ moveit)
 
     git clone https://github.com/moveit/moveit_drake.git
     cd moveit_drake
-    docker-compose -f .docker/docker-compose.yaml build
+    docker compose build
 
 This should give you an image with `drake` and `moveit2`. Next, create a
 container with the following and create shell access.
 
-    docker-compose -f .docker/docker-compose.yaml up
-    docker exec -it moveit_drake bash
+    docker compose up
+    docker compose exec -it moveit bash
 
 Follow [instructions](#build-moveit_drake) below to build `moveit_drake`
 
 
-## Installation
+## Local Installation
 
 ### Install Drake
 
