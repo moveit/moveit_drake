@@ -57,7 +57,7 @@ protected:
 } // namespace ktopt_interface
 
 // register the KTOptPlannerManager class as a plugin
-CLASS_LOADER_TEGISTER_CLASS(
+CLASS_LOADER_REGISTER_CLASS(
     ktopt_interface::KTOptPlannerManager,
     planning_interface::PlannerManager);
 
