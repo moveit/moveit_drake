@@ -43,7 +43,7 @@ Download the MoveIt Tutorials source code:
 
     git clone https://github.com/moveit/moveit_drake.git
     vcs import < moveit_drake/moveit_drake.repos
-    rosdep install -r --from-paths . --ignore-src --rosdistro rolling -y
+    rosdep install -r --from-paths . --ignore-src --rosdistro $ROS_DISTRO -y
 
 Configure and build the workspace:
 
