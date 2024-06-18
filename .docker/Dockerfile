@@ -58,6 +58,9 @@ RUN mkdir -p src && \
     rosdep install -r --from-paths . --ignore-src --rosdistro ${ROS_DISTRO} -y
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    apt remove ros-$ROS_DISTRO-moveit*
+
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --mixin release --parallel-workers 1
 
 # Install any other dependencies of this package

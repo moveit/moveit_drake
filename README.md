@@ -20,7 +20,7 @@ This should give you an image with `drake` and `moveit2`. Next, create a
 container with the following and create shell access.
 
     docker compose up
-    docker compose exec -it moveit bash
+    docker compose exec -it moveit_drake bash
 
 Follow [instructions](#build-moveit_drake) below to build `moveit_drake`
 
