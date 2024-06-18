@@ -2,13 +2,36 @@
 
 Under construction
 
-## Installation
+## Docker Workflow (Preferred and tested)
+
+### Requirements
+`docker` and `docker-compose` - Follow instructions [here](https://docs.docker.com/engine/install/ubuntu/).
+
+### Steps
+The following steps clone and build the base image that you will require to
+test/build/run/develop with the repo (and will take some time, as it builds
+moveit)
+
+    git clone https://github.com/moveit/moveit_drake.git
+    cd moveit_drake
+    docker compose build
+
+This should give you an image with `drake` and `moveit2`. Next, create a
+container with the following and create shell access.
+
+    docker compose up
+    docker compose exec -it moveit_drake bash
+
+Follow [instructions](#build-moveit_drake) below to build `moveit_drake`
+
+
+## Local Installation
 
 ### Install Drake
 
 [Follow these instructions](https://drake.mit.edu/installation.html)
 
-### Build moveit_drake
+### Build `moveit_drake`
 
 Follow the [MoveIt Source Build](https://moveit.ros.org/install-moveit2/source/) instructions to set up a colcon workspace with MoveIt from the source.
 

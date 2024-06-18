@@ -1,0 +1,18 @@
+services:
+  moveit:
+    image: moveit_drake:latest
+    container_name: moveit_drake
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tml/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority
+      - ./:/root/workspace/src/moveit_drake/
+    tty: true
+    stdin_open: true
+    network_mode: "host"
+    command: /bin/bash
