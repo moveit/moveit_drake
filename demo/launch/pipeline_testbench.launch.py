@@ -46,7 +46,7 @@ def launch_setup(context, *args, **kwargs):
         .trajectory_execution(file_path="config/moveit_controllers.yaml")
         .moveit_cpp(
             os.path.join(
-                get_package_share_directory("moveit2_tutorials"),
+                get_package_share_directory("moveit_drake"),
                 "config",
                 "testbench_moveit_cpp.yaml",
             )
@@ -101,7 +101,7 @@ def launch_setup(context, *args, **kwargs):
     # MoveItCpp demo executable
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",
-        package="moveit2_tutorials",
+        package="moveit_drake",
         executable="pipeline_testbench_example",
         output="screen",
         parameters=[
@@ -113,7 +113,7 @@ def launch_setup(context, *args, **kwargs):
 
     # RViz
     rviz_config_file = os.path.join(
-        get_package_share_directory("moveit2_tutorials"),
+        get_package_share_directory("moveit_drake"),
         "config",
         "testbench_config.rviz",
     )
