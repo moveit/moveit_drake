@@ -1,6 +1,6 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_interface/planning_interface.h>
-#include <moveit_msgs/MotionPlanRequest.h>
+//#include <moveit_msgs/msg/MotionPlanRequest.h>
 #include <moveit/planning_scene/planning_scene.h>
 
 #include "ktopt_interface/ktopt_planning_context.h"
@@ -8,20 +8,17 @@
 
 namespace ktopt_interface
 {
-KTOptPlanningContext::KTOptPlanningContext(
-    const std::string& context_name,
-    const std::string& group_name,
-    const moveit::core::RobotModelConstPtr& model
-) : planning_interface::PlanningContext(context_name, group_name), robot_model_(model)
+
+void KTOptPlanningContext::solve(
+    planning_interface::MotionPlanDetailedResponse& res)
 {
-    ktopt_interface_ = KTOptInterfacePtr(new KTOptInterface());
+    return;
 }
 
-bool KTOptPlanningContext::solve(
-    planning_interace::MotionPlanDetailedResponse& res)
+void KTOptPlanningContext::solve(
+    planning_interface::MotionPlanResponse& res)
 {
-    moveit_msgs::MotionPlanDetailedResponse res_msg;
-    return true;
+    return;
 }
 
 bool KTOptPlanningContext::terminate()

@@ -59,3 +59,15 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 ### Development
 
 - Use [pre-commit to format your code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
+
+# Todo section
+
+This section keeps a list of immediate todos, will be deleted before repo release
+
+- [ ] Create drake planning pipeline option in `pipeline_testbench.launch.py`
+- [ ] Declare to moveit, to use the drake ktopt planning pipeline
+- [ ] Build planner manager and planning context to display info
+- [ ] read Robot description and display onto drake visualizer
+
+### Doubts
+- [ ] stomp_moveit::ParamListener, where is this being declared

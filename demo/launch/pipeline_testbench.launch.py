@@ -98,6 +98,31 @@ def launch_setup(context, *args, **kwargs):
         }
     }
 
+    drake_ktopt_planning_pipeline_config = {
+        "drake": {
+            "planning_plugins": [
+                "ktopt_interface/KTOptPlanner",
+            ],
+            "request_adapters": [
+                "default_planning_request_adapters/ResolveConstraintFrames",
+                "default_planning_request_adapters/ValidateWorkspaceBounds",
+                "default_planning_request_adapters/CheckStartStateBounds",
+                "default_planning_request_adapters/CheckStartStateCollision",
+            ],
+            "response_adapters": [
+                "default_planning_response_adapters/AddTimeOptimalParameterization",
+                "default_planning_response_adapters/ValidateSolution",
+                "default_planning_response_adapters/DisplayMotionPath",
+            ],
+            "planner_configs": {
+                "RRTConnectkConfigDefault": {
+                    "type": "geometric::RRTConnect",
+                    "range": 0.0,  # Max motion added to tree. ==> maxDistance_ default: 0.0, if 0.0, set on setup()}
+                }
+            },
+        }
+    }
+
     # MoveItCpp demo executable
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",

@@ -3,6 +3,7 @@
 
 #include <moveit/planning_interface/planning_interface.h>
 #include "ktopt_interface/ktopt_interface.h"
+#include <drake_moveit_parameters.hpp>
 
 namespace ktopt_interface
 {
@@ -11,23 +12,26 @@ class KTOptPlanningContext : public planning_interface::PlanningContext
 public:
     KTOptPlanningContext(
         const std::string& name,
-        const std::string& group,
-        const moveit::core::RobotModelConstPtr& model
-    );
+        const std::string& group_name,
+        const ktopt_interface::Params& params);
     ~KTOptPlanningContext() override
     {
     };
 
-    bool solve(planning_interface:MotionPlanResponse& res) override;
-    bool solve(planning_interface:MotionPlanDetailResponse& res) override;
+    void solve(planning_interface::MotionPlanResponse& res) override;
+    void solve(planning_interface::MotionPlanDetailedResponse& res) override;
 
     bool terminate() override;
     void clear() override;
 
+    void setPathPublisher(
+        const std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>& path_publisher
+    );
+    std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> getPathPublisher();
+
 private:
-    moveit::core::RobotModelConstPtr robot_model_;
-    moveit::core::RobotStatePtr robot_state_;
-    KTOptInterfacePtr ktopt_interface_;
+    const ktopt_interface::Params params_;
+    std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> path_publisher_;
 };
 } // namespace ktopt_interface
 

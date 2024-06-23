@@ -24,6 +24,8 @@ find_package(rclcpp REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(warehouse_ros REQUIRED)
 
+generate_parameter_library(drake_moveit_parameters res/drake_moveit.yaml)
+
 set(THIS_PACKAGE_INCLUDE_DEPENDS
     ament_cmake
     moveit_core
@@ -36,22 +38,27 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 
 include_directories(include)
 
-# Adds an executable in the 
-add_executable(ktopt_example src/ktopt_example.cpp)
-target_link_libraries(
-    ktopt_example
-    ${drake_LIBRARIES}
-    )
-
 # ktopt planning plugin
-add_library(moveit_ktopt_planner_plugin
-    src/ktopt_planner_manager.cpp
-    src/ktopt_interface.cpp
+add_library(moveit_ktopt_planner_plugin SHARED
+    src/ktopt_planner_manager.cpp 
     src/ktopt_planning_context.cpp
     )
 target_link_libraries(
     moveit_ktopt_planner_plugin
     ${drake_LIBRARIES}
+    drake_moveit_parameters
+    )
+
+pluginlib_export_plugin_description_file(
+    moveit_core
+    ktopt_interface_plugin_description.xml
+    )
+
+install(
+    TARGETS moveit_ktopt_planner_plugin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
     )
 
 # TODO: change the diffik name here
@@ -60,6 +67,7 @@ target_link_libraries(
 # TODO: change the diffik name her
 ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib moveit_core
                           moveit_msgs EIGEN3)
+ament_export_dependencies(moveit_core drake generate_parameter_library)
 
 # TODO: change the diffik name here
 # target_link_libraries(moveit_diff_ik_plugin drake::drake)
