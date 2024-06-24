@@ -7,12 +7,14 @@
 #include <rclcpp/node.hpp>
 #include <rclcpp/logging.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <ktopt_interface/ktopt_planning_context.h>
 
 // just so that this builds
 
 namespace ktopt_interface
 {
+using std::placeholders::_1;
 rclcpp::Logger getLogger()
 {
     return moveit::getLogger("moveit.planners.ktopt.planner_manager");
@@ -32,6 +34,10 @@ public:
         node_ = node;
         parameter_namespace_ = parameter_namespace;
         param_listener_ = std::make_shared<ktopt_interface::ParamListener>(node, parameter_namespace);
+        robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
+            "robot_description", 10, std::bind(&KTOptPlannerManager::robot_description_callback, this, _1)
+        );
+        description_set_ = false;
         return true;
     }
 
@@ -82,6 +88,8 @@ public:
             "KTOPT",
             req.group_name,
             params);
+        // set robot description
+        planning_context->setRobotDescription(robot_description_);
         planning_context->setPlanningScene(planning_scene);
         planning_context->setMotionPlanRequest(req);
 
@@ -102,6 +110,19 @@ private:
     std::string parameter_namespace_;
     std::shared_ptr<ktopt_interface::ParamListener> param_listener_;
 
+    // robot description related variables
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_description_subscriber_;
+    bool description_set_;
+    std::string robot_description_;
+
+    void robot_description_callback(const std_msgs::msg::String::SharedPtr msg)
+    {
+        if (!description_set_)
+        {
+            robot_description_ = msg->data;
+            description_set_ = true;
+        }
+    }
 };
 
 } // namespace ktopt_interface

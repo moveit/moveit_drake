@@ -64,10 +64,19 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 
 This section keeps a list of immediate todos, will be deleted before repo release
 
-- [ ] Create drake planning pipeline option in `pipeline_testbench.launch.py`
-- [ ] Declare to moveit, to use the drake ktopt planning pipeline
-- [ ] Build planner manager and planning context to display info
+- [x] Create drake planning pipeline option in `pipeline_testbench.launch.py`
+- [x] Declare to moveit, to use the drake ktopt planning pipeline
+- [ ] Build planner manager and planning context to display info from `moveit`
+  and `drake` instance.
+    - [ ] Generated placeholder classes mimicing `stomp` implementation.
+    - [ ] Display info messages during testbench runtime.
+    - [ ] 
 - [ ] read Robot description and display onto drake visualizer
 
 ### Doubts
-- [ ] stomp_moveit::ParamListener, where is this being declared
+- [x] stomp_moveit::ParamListener, where is this being declared
+- [ ] Why is the parameter file in the "res" directory
+
+### Potential issues
+- Assumes that planner managers initialize will set robot description before a
+  call to getPlanningContext. 

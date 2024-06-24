@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.2)
 project(moveit_drake LANGUAGES CXX)
 
 list(APPEND CMAKE_PREFIX_PATH /opt/drake/lib)
-find_package(drake REQUIRED)
+find_package(drake CONFIG REQUIRED PATHS /opt/drake)
 
 find_package(ament_cmake REQUIRED)
 
@@ -45,7 +45,7 @@ add_library(moveit_ktopt_planner_plugin SHARED
     )
 target_link_libraries(
     moveit_ktopt_planner_plugin
-    ${drake_LIBRARIES}
+    drake::drake
     drake_moveit_parameters
     )
 
@@ -61,16 +61,9 @@ install(
     RUNTIME DESTINATION bin
     )
 
-# TODO: change the diffik name here
-# add_library(moveit_diff_ik_plugin SHARED src/diff_ik_plugin.cpp)
-
-# TODO: change the diffik name her
 ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib moveit_core
                           moveit_msgs EIGEN3)
 ament_export_dependencies(moveit_core drake generate_parameter_library)
-
-# TODO: change the diffik name here
-# target_link_libraries(moveit_diff_ik_plugin drake::drake)
 
 add_subdirectory(demo)
 

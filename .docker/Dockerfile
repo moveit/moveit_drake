@@ -66,6 +66,10 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
 
 # Install any other dependencies of this package
 COPY . ${WORKSPACE}/src/moveit_drake
+WORKDIR ${WORKSPACE}/src/moveit_drake
+RUN vcs import < moveit_drake/moveit_drake.repos
+
+WORKDIR ${WORKSPACE}
 RUN apt update && \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     rosdep install -r --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y
