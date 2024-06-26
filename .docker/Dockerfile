@@ -47,28 +47,23 @@ RUN apt update && \
 
 # Setup the workspace
 WORKDIR ${WORKSPACE}
+RUN mkdir -p src
 
-RUN mkdir -p src && \
-    cd src && \
-    git clone https://github.com/moveit/moveit2.git -b main && \
-    for repo in moveit2/moveit2.repos \
-        $(f="moveit2/moveit2_${ROS_DISTRO}.repos"; test -r $f && echo $f); \
-        do vcs import < "$repo"; done && \
-    apt update && \
+# Install dependencies of this package
+# NOTE: Copying only the necessary files to not bust cache as much.
+COPY moveit_drake.repos ${WORKSPACE}/src/moveit_drake/
+WORKDIR ${WORKSPACE}/src/
+RUN vcs import < moveit_drake/moveit_drake.repos
+
+WORKDIR ${WORKSPACE}
+COPY package.xml ${WORKSPACE}/src/moveit_drake/
+RUN apt update && \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    rosdep install -r --from-paths . --ignore-src --rosdistro ${ROS_DISTRO} -y
-
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    apt remove ros-$ROS_DISTRO-moveit*
+    rosdep install -r --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y && \
+    rm -rf src/moveit_drake
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --mixin release --parallel-workers 1
-
-# Install any other dependencies of this package
-COPY . ${WORKSPACE}/src/moveit_drake
-RUN apt update && \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    rosdep install -r --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y
 
 # Set up the entrypoint
 COPY .docker/ros_entrypoint.sh /sbin/ros_entrypoint.sh
