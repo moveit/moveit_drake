@@ -59,20 +59,23 @@ RUN mkdir -p src && \
     rosdep install -r --from-paths . --ignore-src --rosdistro ${ROS_DISTRO} -y
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    apt remove ros-$ROS_DISTRO-moveit*
-
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --mixin release --parallel-workers 1
 
 # Install any other dependencies of this package
-COPY . ${WORKSPACE}/src/moveit_drake
+# NOTE: Copying only the necessary files to not bust cache as much.
+COPY . ${WORKSPACE}/src/moveit_drake/package.xml
+COPY . ${WORKSPACE}/src/moveit_drake/moveit_drake.repos
 WORKDIR ${WORKSPACE}/src/moveit_drake
-RUN vcs import < moveit_drake/moveit_drake.repos
+RUN vcs import < moveit_drake.repos
 
 WORKDIR ${WORKSPACE}
 RUN apt update && \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     rosdep install -r --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y
+
+# Remove any MoveIt apt packages that were installed as part of rosdep install.
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    apt remove ros-$ROS_DISTRO-moveit*
 
 # Set up the entrypoint
 COPY .docker/ros_entrypoint.sh /sbin/ros_entrypoint.sh

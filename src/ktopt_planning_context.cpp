@@ -2,6 +2,8 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <trajectory_msgs/msg/joint_trajectory_point.hpp>
+
 #include "ktopt_interface/ktopt_planning_context.hpp"
 
 namespace ktopt_interface
@@ -54,8 +56,32 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto trajopt = KinematicTrajectoryOptimization(plant_->num_positions(), 10);
 
   // bare minimum specification
-  // get the frame that needs constraints
-  //
+  // TODO: Add constraints on start joint configuration
+  // TODO: Add constraint on end joint configuration or pose
+  // TODO: Add constraints on joint position/velocity/acceleration
+  // TODO: Add collision checking distance constraints
+  // TODO: Add position/orientation constraints, if any specified in the motion planning request
+
+  // solve the program
+  auto& prog = trajopt.get_mutable_prog();
+  auto result = Solve(prog);
+
+  if (!result.is_success())
+  {
+    res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
+    return;
+  }
+
+  // package up the resulting trajectory
+  auto traj = trajopt.ReconstructTrajectory(result);
+  const size_t num_pts = 101;  // TODO: should be sample time based instead
+  const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
+  for (double t = 0.0; t <= traj.end_time(); t += time_step)
+  {
+    const auto val = traj.value(t);
+    // TODO: Put into the robot trajectory in the response.
+  }
+  res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
 }
 

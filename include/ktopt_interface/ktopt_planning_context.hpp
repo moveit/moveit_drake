@@ -10,6 +10,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/multibody/plant/multibody_plant.h"
 #include "drake/planning/trajectory_optimization/kinematic_trajectory_optimization.h"
+#include "drake/solvers/solve.h"
 
 namespace ktopt_interface
 {
@@ -20,6 +21,7 @@ using drake::geometry::SceneGraph;
 using drake::systems::DiagramBuilder;
 using drake::multibody::Parser;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
+using drake::solvers::Solve;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
 {
