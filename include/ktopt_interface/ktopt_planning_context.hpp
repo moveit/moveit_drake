@@ -1,9 +1,8 @@
-#ifndef KTOPT_PLANNING_CONTEXT_H
-#define KTOPT_PLANNING_CONTEXT_H
+#pragma once
 
 #include <moveit/planning_interface/planning_interface.h>
 #include <drake_moveit_parameters.hpp>
-//
+
 // relevant drake includes
 #include "drake/multibody/parsing/parser.h"
 #include "drake/geometry/scene_graph.h"
@@ -52,10 +51,7 @@ private:
     // drake related variables
     SceneGraph<double>* scene_graph_{};
     MultibodyPlant<double>* plant_{};
-    
+
 
 };
 } // namespace ktopt_interface
-
-#endif //KTOPT_PLANNING_CONTEXT_H
-

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.22)
 project(moveit_drake LANGUAGES CXX)
 
 list(APPEND CMAKE_PREFIX_PATH /opt/drake/lib)
@@ -39,30 +39,22 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 include_directories(include)
 
 # ktopt planning plugin
-add_library(moveit_ktopt_planner_plugin SHARED
-    src/ktopt_planner_manager.cpp 
-    src/ktopt_planning_context.cpp
-    )
-target_link_libraries(
-    moveit_ktopt_planner_plugin
-    drake::drake
-    drake_moveit_parameters
-    )
+add_library(moveit_ktopt_planner_plugin SHARED src/ktopt_planner_manager.cpp
+                                               src/ktopt_planning_context.cpp)
+target_link_libraries(moveit_ktopt_planner_plugin drake::drake
+                      drake_moveit_parameters)
 
-pluginlib_export_plugin_description_file(
-    moveit_core
-    ktopt_interface_plugin_description.xml
-    )
+pluginlib_export_plugin_description_file(moveit_core
+                                         ktopt_interface_plugin_description.xml)
 
 install(
-    TARGETS moveit_ktopt_planner_plugin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    )
+  TARGETS moveit_ktopt_planner_plugin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin)
 
-ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib moveit_core
-                          moveit_msgs EIGEN3)
+ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib
+                          moveit_core moveit_msgs EIGEN3)
 ament_export_dependencies(moveit_core drake generate_parameter_library)
 
 add_subdirectory(demo)
