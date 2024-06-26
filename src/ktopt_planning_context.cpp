@@ -2,7 +2,6 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <trajectory_msgs/msg/joint_trajectory_point.hpp>
 
 #include "ktopt_interface/ktopt_planning_context.hpp"
 
