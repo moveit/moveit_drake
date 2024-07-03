@@ -79,4 +79,10 @@ This section keeps a list of immediate todos, will be deleted before repo releas
 
 ### Potential issues
 - Assumes that planner managers initialize will set robot description before a
-  call to getPlanningContext.
+  call to getPlanningContext. 
+
+### Some helper commands
+To just build `moveit_drake`
+```
+colcon build --packages-select mvoeit_drake
+```

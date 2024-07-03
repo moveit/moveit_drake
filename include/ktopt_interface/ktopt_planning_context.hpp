@@ -22,6 +22,8 @@ using drake::systems::DiagramBuilder;
 using drake::multibody::Parser;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
+using drake::systems::Diagram;
+using drake::systems::Context;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
 {
@@ -53,7 +55,8 @@ private:
     // drake related variables
     SceneGraph<double>* scene_graph_{};
     MultibodyPlant<double>* plant_{};
-
+    std::unique_ptr<Context<double>> diagram_context_;
+    
 
 };
 } // namespace ktopt_interface

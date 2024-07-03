@@ -103,6 +103,12 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   // for now finalize plant here
   plant_->Finalize();
+
+  // in the future you can add other LeafSystems here. For now building the
+  // diagram
+  auto diagram_ = builder.Build();
+  diagram_context_ = diagram_->CreateDefaultContext();
+  Context<double>& plant_context_ = diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get());
 }
 
 void KTOptPlanningContext::clear()
