@@ -84,5 +84,5 @@ This section keeps a list of immediate todos, will be deleted before repo releas
 ### Some helper commands
 To just build `moveit_drake`
 ```
-colcon build --packages-select mvoeit_drake
+colcon build --packages-select moveit_drake
 ```
