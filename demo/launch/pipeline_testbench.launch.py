@@ -110,7 +110,6 @@ def launch_setup(context, *args, **kwargs):
                 "default_planning_request_adapters/CheckStartStateCollision",
             ],
             "response_adapters": [
-                "default_planning_response_adapters/AddTimeOptimalParameterization",
                 "default_planning_response_adapters/ValidateSolution",
                 "default_planning_response_adapters/DisplayMotionPath",
             ],
@@ -124,6 +123,18 @@ def launch_setup(context, *args, **kwargs):
     }
 
     # MoveItCpp demo executable
+    # moveit_cpp_node = Node(
+    #     name="pipeline_testbench_example",
+    #     package="moveit_drake",
+    #     executable="pipeline_testbench_example",
+    #     output="screen",
+    #     parameters=[
+    #         moveit_config.to_dict(),
+    #         ompl_stomp_planning_pipeline_config,
+    #         warehouse_ros_config,
+    #     ],
+    # )
+    # MoveitCpp demo with drake
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",
         package="moveit_drake",
@@ -131,7 +142,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             moveit_config.to_dict(),
-            ompl_stomp_planning_pipeline_config,
+            drake_ktopt_planning_pipeline_config,
             warehouse_ros_config,
         ],
     )
