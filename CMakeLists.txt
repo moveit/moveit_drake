@@ -51,7 +51,8 @@ install(
   TARGETS moveit_ktopt_planner_plugin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin)
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include/ktopt_interface moveit_drake)
 
 ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib
                           moveit_core moveit_msgs EIGEN3)

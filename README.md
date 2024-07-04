@@ -82,7 +82,9 @@ This section keeps a list of immediate todos, will be deleted before repo releas
   call to getPlanningContext. 
 
 ### Some helper commands
-To just build `moveit_drake`
+To just rebuild `moveit_drake`
 ```
+rm -rf build/moveit_drake
+rm -rf install/moveit_drake
 colcon build --packages-select moveit_drake
 ```
