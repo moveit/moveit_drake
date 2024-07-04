@@ -32,7 +32,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   // preliminary house keeping
-  auto time_start = std::chrono::steady_clock::now();
+  const auto time_start = std::chrono::steady_clock::now();
   res.planner_id = std::string("ktopt");
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
