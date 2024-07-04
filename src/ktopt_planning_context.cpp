@@ -86,6 +86,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
 bool KTOptPlanningContext::terminate()
 {
+  RCLCPP_ERROR(getLogger(),
+               "KTOptPlanningContext::terminate() is not implemented!");
   return true;
 }
 
@@ -113,6 +115,8 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::clear()
 {
+  RCLCPP_ERROR(getLogger(),
+               "KTOptPlanningContext::clear() is not implemented!");
   // do something
 }
 }  // namespace ktopt_interface
