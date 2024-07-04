@@ -51,7 +51,7 @@ public:
       RCLCPP_ERROR(getLogger(), "Invalid joint group '%s'", req.group_name.c_str());
       return false;
     }
-    return false;
+    return true;
   }
 
   std::string getDescription() const override
