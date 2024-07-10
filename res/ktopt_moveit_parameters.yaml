@@ -1,0 +1,9 @@
+ktopt_interface:
+  num_iterations: {
+    type: int,
+    description: "dummy",
+    default_value: 1000,
+    validation: {
+      gt_eq<>: [1]
+    }
+  }

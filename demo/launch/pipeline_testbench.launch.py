@@ -98,7 +98,25 @@ def launch_setup(context, *args, **kwargs):
         }
     }
 
-    # MoveItCpp demo executable
+    drake_ktopt_planning_pipeline_config = {
+        "drake": {
+            "planning_plugins": [
+                "ktopt_interface/KTOptPlanner",
+            ],
+            "request_adapters": [
+                "default_planning_request_adapters/ResolveConstraintFrames",
+                "default_planning_request_adapters/ValidateWorkspaceBounds",
+                "default_planning_request_adapters/CheckStartStateBounds",
+                "default_planning_request_adapters/CheckStartStateCollision",
+            ],
+            "response_adapters": [
+                "default_planning_response_adapters/ValidateSolution",
+                "default_planning_response_adapters/DisplayMotionPath",
+            ],
+        }
+    }
+
+    # MoveitCpp demo with drake
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",
         package="moveit_drake",
@@ -106,7 +124,7 @@ def launch_setup(context, *args, **kwargs):
         output="screen",
         parameters=[
             moveit_config.to_dict(),
-            ompl_stomp_planning_pipeline_config,
+            drake_ktopt_planning_pipeline_config,
             warehouse_ros_config,
         ],
     )
