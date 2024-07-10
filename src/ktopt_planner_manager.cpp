@@ -6,7 +6,6 @@
 #include <class_loader/class_loader.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/logging.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <ktopt_interface/ktopt_planning_context.hpp>
 
@@ -83,13 +82,6 @@ public:
     planning_context->setRobotDescription(robot_description_);
     planning_context->setPlanningScene(planning_scene);
     planning_context->setMotionPlanRequest(req);
-
-    if (!params.path_marker_topic.empty())
-    {
-      auto path_publisher = node_->create_publisher<visualization_msgs::msg::MarkerArray>(params.path_marker_topic,
-                                                                                          rclcpp::SystemDefaultsQoS());
-      planning_context->setPathPublisher(path_publisher);
-    }
 
     return planning_context;
   }

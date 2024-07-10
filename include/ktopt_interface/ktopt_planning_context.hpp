@@ -1,7 +1,7 @@
 #pragma once
 
 #include <moveit/planning_interface/planning_interface.h>
-#include <drake_moveit_parameters.hpp>
+#include <ktopt_moveit_parameters.hpp>
 
 // relevant drake includes
 #include "drake/multibody/parsing/parser.h"
@@ -41,22 +41,17 @@ public:
     bool terminate() override;
     void clear() override;
 
-    void setPathPublisher(
-        const std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>& path_publisher
-    );
-    std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> getPathPublisher();
     void setRobotDescription(std::string robot_description);
 
 private:
     const ktopt_interface::Params params_;
-    std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>> path_publisher_;
     std::string robot_description_;
 
     // drake related variables
     SceneGraph<double>* scene_graph_{};
     MultibodyPlant<double>* plant_{};
     std::unique_ptr<Context<double>> diagram_context_;
-    
+
 
 };
 } // namespace ktopt_interface

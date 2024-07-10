@@ -24,7 +24,8 @@ find_package(rclcpp REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(warehouse_ros REQUIRED)
 
-generate_parameter_library(drake_moveit_parameters res/drake_moveit.yaml)
+generate_parameter_library(ktopt_moveit_parameters
+                           res/ktopt_moveit_parameters.yaml)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
     ament_cmake
@@ -41,22 +42,31 @@ include_directories(include)
 # ktopt planning plugin
 add_library(moveit_ktopt_planner_plugin SHARED src/ktopt_planner_manager.cpp
                                                src/ktopt_planning_context.cpp)
+
+ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib
+                          moveit_core moveit_msgs EIGEN3)
 target_link_libraries(moveit_ktopt_planner_plugin drake::drake
-                      drake_moveit_parameters)
+                      ktopt_moveit_parameters)
+
+# Ensure that the plugin finds libdrake.so at runtime
+set_target_properties(
+  moveit_ktopt_planner_plugin PROPERTIES INSTALL_RPATH "/opt/drake/lib"
+                                         BUILD_RPATH "/opt/drake/lib")
 
 pluginlib_export_plugin_description_file(moveit_core
                                          ktopt_interface_plugin_description.xml)
 
 install(
-  TARGETS moveit_ktopt_planner_plugin
+  TARGETS moveit_ktopt_planner_plugin ktopt_moveit_parameters
+  EXPORT moveit_ktopt_planner_pluginTargets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
-  INCLUDES DESTINATION include/ktopt_interface moveit_drake)
+  INCLUDES
+  DESTINATION include/ktopt_interface)
 
-ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib
-                          moveit_core moveit_msgs EIGEN3)
-ament_export_dependencies(moveit_core drake generate_parameter_library)
+ament_export_targets(moveit_ktopt_planner_pluginTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(moveit_core drake::drake generate_parameter_library)
 
 add_subdirectory(demo)
 

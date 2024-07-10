@@ -113,27 +113,9 @@ def launch_setup(context, *args, **kwargs):
                 "default_planning_response_adapters/ValidateSolution",
                 "default_planning_response_adapters/DisplayMotionPath",
             ],
-            "planner_configs": {
-                "RRTConnectkConfigDefault": {
-                    "type": "geometric::RRTConnect",
-                    "range": 0.0,  # Max motion added to tree. ==> maxDistance_ default: 0.0, if 0.0, set on setup()}
-                }
-            },
         }
     }
 
-    # MoveItCpp demo executable
-    # moveit_cpp_node = Node(
-    #     name="pipeline_testbench_example",
-    #     package="moveit_drake",
-    #     executable="pipeline_testbench_example",
-    #     output="screen",
-    #     parameters=[
-    #         moveit_config.to_dict(),
-    #         ompl_stomp_planning_pipeline_config,
-    #         warehouse_ros_config,
-    #     ],
-    # )
     # MoveitCpp demo with drake
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",
