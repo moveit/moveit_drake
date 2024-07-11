@@ -53,8 +53,7 @@ set_target_properties(
   moveit_ktopt_planner_plugin PROPERTIES INSTALL_RPATH "/opt/drake/lib"
                                          BUILD_RPATH "/opt/drake/lib")
 
-pluginlib_export_plugin_description_file(moveit_core
-                                         ktopt_interface_plugin_description.xml)
+pluginlib_export_plugin_description_file(moveit_core plugin_descriptions.xml)
 
 install(
   TARGETS moveit_ktopt_planner_plugin ktopt_moveit_parameters
@@ -63,7 +62,7 @@ install(
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES
-  DESTINATION include/ktopt_interface)
+  DESTINATION include/drake)
 
 ament_export_targets(moveit_ktopt_planner_pluginTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(moveit_core drake::drake generate_parameter_library)

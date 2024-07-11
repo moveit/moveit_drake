@@ -1,0 +1,17 @@
+<library  path="moveit_ktopt_planner_plugin">
+  <!-- KTOP adapter -->
+  <class name="ktopt_interface/KTOptPlanner"
+         type="ktopt_interface::KTOptPlannerManager"
+         base_class_type="planning_interface::PlannerManager">
+    <description>
+      A Drake Kinematic Trajectory Optimization plugin
+    </description>
+  </class>
+  <!-- TOPPRA adapter -->
+  <class name="drake_planning_response_adapters/AddToppraParameterization" type="drake_planning_response_adapters::AddToppraParameterization" base_class_type="planning_interface::PlanningResponseAdapter">
+    <description>
+      Adapter to check the request path validity (collision avoidance, feasibility and constraint satisfaction).
+    </description>
+  </class>
+
+</library>
