@@ -11,7 +11,7 @@ namespace
 {
 rclcpp::Logger getLogger()
 {
-  return moveit::getLogger("moveit.planners.ktopt_drake.planning_context");
+  return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
 }  // namespace
 
@@ -31,6 +31,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
+  RCLCPP_INFO(getLogger(),
+              "Solving up Optimization problem :)"
+              );
   // preliminary house keeping
   const auto time_start = std::chrono::steady_clock::now();
   res.planner_id = std::string("ktopt");

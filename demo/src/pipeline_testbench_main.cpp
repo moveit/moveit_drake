@@ -323,7 +323,11 @@ int main(int argc, char** argv)
   for (const auto& motion_plan_req : demo.getMotionPlanRequests())
   {
     demo.planAndVisualize(
-        { { "ompl", "RRTConnectkConfigDefault" }, { "stomp", "stomp" }, { "ompl_stomp", "RRTConnectkConfigDefault" } },
+        { 
+        { "ompl", "RRTConnectkConfigDefault" },
+        { "stomp", "stomp" },
+        { "ompl_stomp", "RRTConnectkConfigDefault" }, 
+        { "drake", "RRTConnectkConfigDefault"} },
         motion_plan_req);
   }
 
