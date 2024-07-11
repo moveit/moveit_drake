@@ -40,6 +40,7 @@ def launch_setup(context, *args, **kwargs):
         MoveItConfigsBuilder("moveit_resources_panda")
         .robot_description(file_path="config/panda.urdf.xacro")
         .planning_pipelines(pipelines=["ompl", "stomp"])
+        # .planning_pipelines(pipelines=["drake"])
         .planning_scene_monitor(
             publish_robot_description=True, publish_robot_description_semantic=True
         )
@@ -77,6 +78,7 @@ def launch_setup(context, *args, **kwargs):
             "planning_plugins": [
                 "ompl_interface/OMPLPlanner",
                 "stomp_moveit/StompPlanner",
+                "ktopt_interface/KTOptPlanner"
             ],
             "request_adapters": [
                 "default_planning_request_adapters/ResolveConstraintFrames",
