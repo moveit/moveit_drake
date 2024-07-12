@@ -31,9 +31,19 @@ public:
     node_ = node;
     parameter_namespace_ = parameter_namespace;
     param_listener_ = std::make_shared<ktopt_interface::ParamListener>(node, parameter_namespace);
+    //robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
+    //    "robot_description", 10, std::bind(&KTOptPlannerManager::robot_description_callback, this, _1));
     robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
-        "robot_description", 10, std::bind(&KTOptPlannerManager::robot_description_callback, this, _1));
+      "/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std_msgs::msg::String::SharedPtr msg){
+        if (!description_set_)
+        {
+          robot_description_ = msg->data;
+          description_set_ = true;
+          RCLCPP_INFO(getLogger(), "Robot description set");
+        }
+      });
     description_set_ = false;
+    RCLCPP_INFO(getLogger(), "KTOpt planner manager initialized!");
     return true;
   }
 
@@ -53,9 +63,9 @@ public:
 
     if (!description_set_)
     {
-      RCLCPP_ERROR(getLogger(), "Robot description has not yet been set, " 
+      RCLCPP_ERROR_STREAM(getLogger(), "Robot description has not yet been set, " 
                    << "this means that Drake's internal MultibodyPlant "
-                   << "and SceneGraph have not been initialised");
+                   << "and SceneGraph have not been initialised.");
       return false;
     }
     return true;
@@ -63,7 +73,7 @@ public:
 
   std::string getDescription() const override
   {
-    return "Kinematic Trajectory Optimization Planner";
+    return "KTOpt";
   }
 
   void getPlanningAlgorithms(std::vector<std::string>& algs) const override
@@ -112,6 +122,7 @@ private:
     {
       robot_description_ = msg->data;
       description_set_ = true;
+      RCLCPP_INFO_STREAM(getLogger(), "Robot description has been set.");
     }
   }
 };

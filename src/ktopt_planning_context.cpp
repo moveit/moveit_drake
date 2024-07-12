@@ -82,6 +82,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   {
     const auto val = traj.value(t);
     // TODO: Put into the robot trajectory in the response.
+    // This goes into the res.trajectory object
+    RCLCPP_INFO_STREAM(getLogger(), "This is val: " << val);
   }
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
