@@ -50,6 +50,14 @@ public:
       RCLCPP_ERROR(getLogger(), "Invalid joint group '%s'", req.group_name.c_str());
       return false;
     }
+
+    if (!description_set_)
+    {
+      RCLCPP_ERROR(getLogger(), "Robot description has not yet been set, " 
+                   << "this means that Drake's internal MultibodyPlant "
+                   << "and SceneGraph have not been initialised");
+      return false;
+    }
     return true;
   }
 
