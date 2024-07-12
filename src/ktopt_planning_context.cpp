@@ -32,7 +32,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   RCLCPP_INFO(getLogger(),
-              "Solving up Optimization problem :)"
+              "Setting up and solving optimization problem ..)"
               );
   // preliminary house keeping
   const auto time_start = std::chrono::steady_clock::now();

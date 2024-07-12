@@ -99,6 +99,7 @@ private:
 
   void robot_description_callback(const std_msgs::msg::String::SharedPtr msg)
   {
+    RCLCPP_INFO(getLogger(), "Retrieved robot description!!");
     if (!description_set_)
     {
       robot_description_ = msg->data;
