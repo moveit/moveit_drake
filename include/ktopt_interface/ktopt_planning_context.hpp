@@ -24,6 +24,7 @@ using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Diagram;
 using drake::systems::Context;
+using drake::multibody::PackageMap;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
 {

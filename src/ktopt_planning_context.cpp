@@ -105,7 +105,16 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   std::tie(plant_, scene_graph_) = AddMultibodyPlantSceneGraph(&builder, 0.0);
 
-  auto robot_instance = Parser(plant_, scene_graph_).AddModels(robot_description_);
+  // TODO:(kamiradi) change to the following once you get a proper description
+  // frm the manager
+  // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_);
+
+  // HACK: For now loading directly from drake's package map
+  const char* ModelUrl = 
+    "package://drake_models/franka_description/"
+    "urdf/panda_arm.urdf";
+  const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
+  auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
   plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
 
   // for now finalize plant here

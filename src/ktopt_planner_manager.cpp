@@ -61,14 +61,38 @@ public:
       return false;
     }
 
-    if (!description_set_)
-    {
-      RCLCPP_ERROR_STREAM(getLogger(), "Robot description has not yet been set, " 
-                   << "this means that Drake's internal MultibodyPlant "
-                   << "and SceneGraph have not been initialised.");
-      return false;
-    }
+    // if (!description_set_)
+    // {
+    //   RCLCPP_ERROR_STREAM(getLogger(), "Robot description has not yet been set, " 
+    //                << "this means that Drake's internal MultibodyPlant "
+    //                << "and SceneGraph have not been initialised.");
+    //   // DEBG: Created a separate function to re-subscribe to the
+    //   // robot_description topic, but cannot execute it as this funciton itself
+    //   // is a const function, cannot modify the object from which it is called.
+    //   // Any function that is called inside as well will not be able to change
+    //   // the state of the object.
+
+    //   // initializeRobotDescription();
+    //   return false;
+    // }
     return true;
+  }
+
+  void initializeRobotDescription()
+  {
+    RCLCPP_INFO_STREAM(getLogger(), "Reinitializing subscription to robot description");
+    robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
+      "/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std_msgs::msg::String::SharedPtr msg)
+      {
+        if (!description_set_)
+        {
+          robot_description_ = msg->data;
+          description_set_ = true;
+          RCLCPP_INFO(getLogger(), "Robot description set");
+        }
+      });
+
+    return;
   }
 
   std::string getDescription() const override
