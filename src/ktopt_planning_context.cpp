@@ -15,8 +15,10 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 
-KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
-                                           const ktopt_interface::Params& params)
+KTOptPlanningContext::KTOptPlanningContext(
+  const std::string& name,
+  const std::string& group_name,
+  const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
 {
   // Do some drake initialization may be
@@ -41,8 +43,19 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
-  const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
+  const moveit::core::RobotState start_state(
+    *getPlanningScene()->getCurrentStateUpdated(
+      req.start_state));
+  const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(
+    getGroupName());
+  const auto& joints = group->getActiveJointModels();
+
   // TODO: update plant_ state here as well
+  // q represents the complete state (joint positions and velocities)
+  const auto q = moveit_to_drake_complete_state(start_state, joints);
+
+  // drake accepts a VectorX<T> 
+  plant_->SetPositionsAndVelocities(plant_context_, q);
 
   // retrieve goal state
   moveit::core::RobotState goal_state(start_state);
@@ -55,21 +68,63 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(plant_->num_positions(), 10);
+  auto trajopt = KinematicTrajectoryOptimization(
+    plant_->num_positions(),
+    params_.control_points);
+  auto& prog = trajopt.get_mutable_prog();
 
-  // bare minimum specification
-  // TODO: Add constraints on start joint configuration
-  // TODO: Add constraint on end joint configuration or pose
+  // Costs
+  trajopt.AddDurationCost(1.0);
+  trajopt.AddPathLengthCost(1.0);
+  // TODO: Adds quadratic cost
+  // This acts as a secondary cost to push the solution towards joint centers
+  // prog.AddQuadraticErrorCost(
+  //   MatrixXd::Identity(joints.size(), joints.size()),
+  //   nominal_q_;
+  // );
+  // prog.AddQuadraticErrorCost();
+
+  // Constraints
+  // TODO: Add constraints on start joint configuration and velocity
+  trajopt.AddPathPositionConstraint(
+    moveit_to_drake_position_state(start_state, joints),
+    moveit_to_drake_position_state(start_state, joints),
+    0
+  );
+  trajopt.AddPathVelocityConstraint(
+    VectorXd::Zero(joints.size()),
+    VectorXd::Zero(joints.size()),
+    0
+  );
+  // TODO: Add constraint on end joint configuration and velocity
+  trajopt.AddPathPositionConstraint(
+    moveit_to_drake_position_state(goal_state, joints),
+    moveit_to_drake_position_state(goal_state, joints),
+    1
+  );
+  trajopt.AddPathVelocityConstraint(
+    VectorXd::Zero(joints.size()),
+    VectorXd::Zero(joints.size()),
+    1
+  );
   // TODO: Add constraints on joint position/velocity/acceleration
+  trajopt.AddPositionBounds(
+      plant_->GetPositionLowerLimits(),
+      plant_->GetPositionUpperLimits());
+  trajopt.AddVelocityBounds(
+      plant_->GetVelocityLowerLimits(),
+      plant_->GetVelocityUpperLimits());
+  // TODO: Add constraints on duration
+  trajopt.AddDurationConstraint(0.5, 5);
   // TODO: Add collision checking distance constraints
   // TODO: Add position/orientation constraints, if any specified in the motion planning request
 
   // solve the program
-  auto& prog = trajopt.get_mutable_prog();
   auto result = Solve(prog);
 
   if (!result.is_success())
   {
+    RCLCPP_ERROR(getLogger(), "Trajectory optimization failed");
     res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
     return;
   }
@@ -124,7 +179,39 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // diagram
   auto diagram_ = builder.Build();
   diagram_context_ = diagram_->CreateDefaultContext();
-  Context<double>& plant_context_ = diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get());
+  plant_context_ = &diagram_->GetMutableSubsystemContext(
+    *plant_,
+    diagram_context_.get());
+  nominal_q_ = plant_->GetPositions(*plant_context_);
+}
+
+VectorXd KTOptPlanningContext::moveit_to_drake_complete_state(
+  const moveit::core::RobotState& state,
+  const Joints& joints)
+{
+  // VectorXd::Zero(num_of_joints) for velocity
+  // VectorXd
+  // TODO: Potentially misleading as it does not return the joint velocities
+  // but rather 0s them out for the sake of the optimization problem, change
+  // the name of the function?
+  VectorXd q = VectorXd::Zero(2*joints.size());
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    q[joint_index] = *state.getJointPositions(joints[joint_index]);
+  }
+  return q;
+}
+
+VectorXd KTOptPlanningContext::moveit_to_drake_position_state(
+  const moveit::core::RobotState& state,
+  const Joints& joints)
+{
+  VectorXd q = VectorXd::Zero(joints.size());
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    q[joint_index] = *state.getJointPositions(joints[joint_index]);
+  }
+  return q;
 }
 
 void KTOptPlanningContext::clear()

@@ -4,6 +4,7 @@
 #include <ktopt_moveit_parameters.hpp>
 
 // relevant drake includes
+#include "drake/common/eigen_types.h"
 #include "drake/multibody/parsing/parser.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/systems/framework/diagram.h"
@@ -25,6 +26,9 @@ using drake::solvers::Solve;
 using drake::systems::Diagram;
 using drake::systems::Context;
 using drake::multibody::PackageMap;
+using Eigen::VectorXd;
+using Eigen::MatrixXd;
+using Joints = std::vector<const moveit::core::JointModel*>;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
 {
@@ -43,6 +47,13 @@ public:
     void clear() override;
 
     void setRobotDescription(std::string robot_description);
+    VectorXd moveit_to_drake_complete_state(
+        const moveit::core::RobotState& state,
+        const Joints& joints);
+    VectorXd moveit_to_drake_position_state(
+        const moveit::core::RobotState& state,
+        const Joints& joints);
+
 
 private:
     const ktopt_interface::Params params_;
@@ -52,7 +63,7 @@ private:
     SceneGraph<double>* scene_graph_{};
     MultibodyPlant<double>* plant_{};
     std::unique_ptr<Context<double>> diagram_context_;
-
-
+    Context<double>* plant_context_;
+    VectorXd nominal_q_;
 };
 } // namespace ktopt_interface

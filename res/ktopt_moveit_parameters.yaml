@@ -7,3 +7,8 @@ ktopt_interface:
       gt_eq<>: [1]
     }
   }
+  control_points: {
+    type: int,
+    description: "Number of control points used to represent the B-Spline",
+    default_value: 10
+  }
