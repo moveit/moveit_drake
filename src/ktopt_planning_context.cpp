@@ -53,7 +53,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
                      << getGroupName());
   const auto& joints = group->getActiveJointModels();
 
-  // TODO: update plant_ state here as well
   // q represents the complete state (joint positions and velocities)
   const auto q = moveit_to_drake_complete_state(start_state, joints);
 
@@ -88,7 +87,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // prog.AddQuadraticErrorCost();
 
   // Constraints
-  // TODO: Add constraints on start joint configuration and velocity
+  // Add constraints on start joint configuration and velocity
   trajopt.AddPathPositionConstraint(
     moveit_to_drake_position_state(start_state, joints),
     moveit_to_drake_position_state(start_state, joints),
@@ -99,7 +98,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     VectorXd::Zero(joints.size()),
     0
   );
-  // TODO: Add constraint on end joint configuration and velocity
+  // Add constraint on end joint configuration and velocity
   trajopt.AddPathPositionConstraint(
     moveit_to_drake_position_state(goal_state, joints),
     moveit_to_drake_position_state(goal_state, joints),
@@ -110,15 +109,17 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     VectorXd::Zero(joints.size()),
     1
   );
-  // TODO: Add constraints on joint position/velocity/acceleration
+  // TODO Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
   //     plant_->GetPositionLowerLimits(),
   //     plant_->GetPositionUpperLimits());
   // trajopt.AddVelocityBounds(
   //     plant_->GetVelocityLowerLimits(),
   //     plant_->GetVelocityUpperLimits());
-  // TODO: Add constraints on duration
+
+  // Add constraints on duration
   trajopt.AddDurationConstraint(0.5, 5);
+
   // TODO: Add collision checking distance constraints
   // TODO: Add position/orientation constraints, if any specified in the motion planning request
 
@@ -148,8 +149,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   for (double t = 0.0; t <= traj.end_time(); t += time_step)
   {
     const auto val = traj.value(t);
-    // TODO: Put into the robot trajectory in the response.
-    // This goes into the res.trajectory object
     const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
     set_joint_positions(val, active_joints, *waypoint);
     res.trajectory->addSuffixWayPoint(waypoint, time_step);
