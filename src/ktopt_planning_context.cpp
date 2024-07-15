@@ -48,6 +48,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
       req.start_state));
   const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(
     getGroupName());
+  RCLCPP_INFO_STREAM(getLogger(),
+                     "Planning for group"
+                     << getGroupName());
   const auto& joints = group->getActiveJointModels();
 
   // TODO: update plant_ state here as well
@@ -108,12 +111,12 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     1
   );
   // TODO: Add constraints on joint position/velocity/acceleration
-  trajopt.AddPositionBounds(
-      plant_->GetPositionLowerLimits(),
-      plant_->GetPositionUpperLimits());
-  trajopt.AddVelocityBounds(
-      plant_->GetVelocityLowerLimits(),
-      plant_->GetVelocityUpperLimits());
+  // trajopt.AddPositionBounds(
+  //     plant_->GetPositionLowerLimits(),
+  //     plant_->GetPositionUpperLimits());
+  // trajopt.AddVelocityBounds(
+  //     plant_->GetVelocityLowerLimits(),
+  //     plant_->GetVelocityUpperLimits());
   // TODO: Add constraints on duration
   trajopt.AddDurationConstraint(0.5, 5);
   // TODO: Add collision checking distance constraints
@@ -133,12 +136,23 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto traj = trajopt.ReconstructTrajectory(result);
   const size_t num_pts = 101;  // TODO: should be sample time based instead
   const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
+  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
+    start_state.getRobotModel(),
+    group
+  );
+  res.trajectory->clear();
+  const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() : res.trajectory->getRobotModel()->getActiveJointModels();
+
+  // sanity check
+  assert(traj.rows() == active_joints.size());
   for (double t = 0.0; t <= traj.end_time(); t += time_step)
   {
     const auto val = traj.value(t);
     // TODO: Put into the robot trajectory in the response.
     // This goes into the res.trajectory object
-    RCLCPP_INFO_STREAM(getLogger(), "This is val: " << val);
+    const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
+    set_joint_positions(val, active_joints, *waypoint);
+    res.trajectory->addSuffixWayPoint(waypoint, time_step);
   }
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
@@ -212,6 +226,17 @@ VectorXd KTOptPlanningContext::moveit_to_drake_position_state(
     q[joint_index] = *state.getJointPositions(joints[joint_index]);
   }
   return q;
+}
+
+void KTOptPlanningContext::set_joint_positions(
+  const VectorXd& values,
+  const Joints& joints, moveit::core::RobotState& state)
+{
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    state.setJointPositions(joints[joint_index], &values[joint_index]);
+  }
+  return;
 }
 
 void KTOptPlanningContext::clear()

@@ -53,6 +53,7 @@ public:
     VectorXd moveit_to_drake_position_state(
         const moveit::core::RobotState& state,
         const Joints& joints);
+    void set_joint_positions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
 
 
 private:
