@@ -40,7 +40,6 @@ def launch_setup(context, *args, **kwargs):
         MoveItConfigsBuilder("moveit_resources_panda")
         .robot_description(file_path="config/panda.urdf.xacro")
         .planning_pipelines(pipelines=["ompl", "stomp"])
-        # .planning_pipelines(pipelines=["drake"])
         .planning_scene_monitor(
             publish_robot_description=True, publish_robot_description_semantic=True
         )
@@ -70,34 +69,6 @@ def launch_setup(context, *args, **kwargs):
             "port": 33828,
             "scene_name": "kitchen_panda_scene_sensed1",
         },
-    }
-
-    # Load additional OMPL-STOMP chain pipeline
-    ompl_stomp_planning_pipeline_config = {
-        "ompl_stomp": {
-            "planning_plugins": [
-                "ompl_interface/OMPLPlanner",
-                "stomp_moveit/StompPlanner",
-                "ktopt_interface/KTOptPlanner"
-            ],
-            "request_adapters": [
-                "default_planning_request_adapters/ResolveConstraintFrames",
-                "default_planning_request_adapters/ValidateWorkspaceBounds",
-                "default_planning_request_adapters/CheckStartStateBounds",
-                "default_planning_request_adapters/CheckStartStateCollision",
-            ],
-            "response_adapters": [
-                "default_planning_response_adapters/AddTimeOptimalParameterization",
-                "default_planning_response_adapters/ValidateSolution",
-                "default_planning_response_adapters/DisplayMotionPath",
-            ],
-            "planner_configs": {
-                "RRTConnectkConfigDefault": {
-                    "type": "geometric::RRTConnect",
-                    "range": 0.0,  # Max motion added to tree. ==> maxDistance_ default: 0.0, if 0.0, set on setup()}
-                }
-            },
-        }
     }
 
     drake_ktopt_planning_pipeline_config = {
