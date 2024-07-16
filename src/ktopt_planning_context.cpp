@@ -34,7 +34,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   RCLCPP_INFO(getLogger(),
-              "Setting up and solving optimization problem ..)"
+              "Setting up and solving optimization problem ..."
               );
   // preliminary house keeping
   const auto time_start = std::chrono::steady_clock::now();
@@ -91,23 +91,23 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPathPositionConstraint(
     moveit_to_drake_position_state(start_state, joints),
     moveit_to_drake_position_state(start_state, joints),
-    0
+    0.0
   );
   trajopt.AddPathVelocityConstraint(
     VectorXd::Zero(joints.size()),
     VectorXd::Zero(joints.size()),
-    0
+    0.0
   );
   // Add constraint on end joint configuration and velocity
   trajopt.AddPathPositionConstraint(
     moveit_to_drake_position_state(goal_state, joints),
     moveit_to_drake_position_state(goal_state, joints),
-    1
+    1.0
   );
   trajopt.AddPathVelocityConstraint(
     VectorXd::Zero(joints.size()),
     VectorXd::Zero(joints.size()),
-    1
+    1.0
   );
   // TODO Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
