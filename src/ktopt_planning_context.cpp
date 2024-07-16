@@ -56,7 +56,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // q represents the complete state (joint positions and velocities)
   const auto q = moveit_to_drake_complete_state(start_state, joints);
 
-  // drake accepts a VectorX<T> 
+  // drake accepts a VectorX<T>
   plant_->SetPositionsAndVelocities(plant_context_, q);
 
   // retrieve goal state
@@ -173,12 +173,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   std::tie(plant_, scene_graph_) = AddMultibodyPlantSceneGraph(&builder, 0.0);
 
-  // TODO:(kamiradi) change to the following once you get a proper description
-  // frm the manager
-  // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_);
+  // TODO:(kamiradi) Figure out object parsing
+  // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
   // HACK: For now loading directly from drake's package map
-  const char* ModelUrl = 
+  const char* ModelUrl =
     "package://drake_models/franka_description/"
     "urdf/panda_arm.urdf";
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
