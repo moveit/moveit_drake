@@ -12,3 +12,8 @@ ktopt_interface:
     description: "Number of control points used to represent the B-Spline",
     default_value: 10
   }
+  trajectory_res: {
+    type: int,
+    description: "Timestep resolution where the KTOpt trajectory is evaluated and reported",
+    default_value: 101
+  }

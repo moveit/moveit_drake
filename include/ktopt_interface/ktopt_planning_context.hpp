@@ -47,13 +47,17 @@ public:
     void clear() override;
 
     void setRobotDescription(std::string robot_description);
-    VectorXd moveit_to_drake_complete_state(
+    VectorXd toDrakePositions(
         const moveit::core::RobotState& state,
         const Joints& joints);
-    VectorXd moveit_to_drake_position_state(
-        const moveit::core::RobotState& state,
-        const Joints& joints);
-    void set_joint_positions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
+    void setJointPositions(
+        const VectorXd& values,
+        const Joints& joints,
+        moveit::core::RobotState& state);
+    void setJointVelocities(
+        const VectorXd& values,
+        const Joints& joints,
+        moveit::core::RobotState& state);
 
 
 private:

@@ -54,7 +54,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto& joints = group->getActiveJointModels();
 
   // q represents the complete state (joint positions and velocities)
-  const auto q = moveit_to_drake_complete_state(start_state, joints);
+  const auto q_p = toDrakePositions(start_state, joints);
+  VectorXd q_v = VectorXd::Zero(joints.size());
+  VectorXd q = VectorXd::Zero(2*joints.size());
+  q << q_p;
+  q << q_v;
 
   // drake accepts a VectorX<T>
   plant_->SetPositionsAndVelocities(plant_context_, q);
@@ -89,8 +93,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // Constraints
   // Add constraints on start joint configuration and velocity
   trajopt.AddPathPositionConstraint(
-    moveit_to_drake_position_state(start_state, joints),
-    moveit_to_drake_position_state(start_state, joints),
+    toDrakePositions(start_state, joints),
+    toDrakePositions(start_state, joints),
     0.0
   );
   trajopt.AddPathVelocityConstraint(
@@ -100,8 +104,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   );
   // Add constraint on end joint configuration and velocity
   trajopt.AddPathPositionConstraint(
-    moveit_to_drake_position_state(goal_state, joints),
-    moveit_to_drake_position_state(goal_state, joints),
+    toDrakePositions(goal_state, joints),
+    toDrakePositions(goal_state, joints),
     1.0
   );
   trajopt.AddPathVelocityConstraint(
@@ -135,7 +139,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // package up the resulting trajectory
   auto traj = trajopt.ReconstructTrajectory(result);
-  const size_t num_pts = 101;  // TODO: should be sample time based instead
+  const size_t num_pts = params_.trajectory_res;  // TODO: should be sample time based instead
   const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
   res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
     start_state.getRobotModel(),
@@ -148,9 +152,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   assert(traj.rows() == active_joints.size());
   for (double t = 0.0; t <= traj.end_time(); t += time_step)
   {
-    const auto val = traj.value(t);
+    const auto pos_val = traj.value(t);
+    const auto vel_val = traj.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
-    set_joint_positions(val, active_joints, *waypoint);
+    setJointPositions(pos_val, active_joints, *waypoint);
+    setJointVelocities(vel_val, active_joints, *waypoint);
     res.trajectory->addSuffixWayPoint(waypoint, time_step);
   }
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
@@ -197,24 +203,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   nominal_q_ = plant_->GetPositions(*plant_context_);
 }
 
-VectorXd KTOptPlanningContext::moveit_to_drake_complete_state(
-  const moveit::core::RobotState& state,
-  const Joints& joints)
-{
-  // VectorXd::Zero(num_of_joints) for velocity
-  // VectorXd
-  // TODO: Potentially misleading as it does not return the joint velocities
-  // but rather 0s them out for the sake of the optimization problem, change
-  // the name of the function?
-  VectorXd q = VectorXd::Zero(2*joints.size());
-  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
-  {
-    q[joint_index] = *state.getJointPositions(joints[joint_index]);
-  }
-  return q;
-}
-
-VectorXd KTOptPlanningContext::moveit_to_drake_position_state(
+VectorXd KTOptPlanningContext::toDrakePositions(
   const moveit::core::RobotState& state,
   const Joints& joints)
 {
@@ -226,13 +215,26 @@ VectorXd KTOptPlanningContext::moveit_to_drake_position_state(
   return q;
 }
 
-void KTOptPlanningContext::set_joint_positions(
+void KTOptPlanningContext::setJointPositions(
   const VectorXd& values,
-  const Joints& joints, moveit::core::RobotState& state)
+  const Joints& joints,
+  moveit::core::RobotState& state)
 {
   for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
   {
     state.setJointPositions(joints[joint_index], &values[joint_index]);
+  }
+  return;
+}
+
+void KTOptPlanningContext::setJointVelocities(
+  const VectorXd& values,
+  const Joints& joints,
+  moveit::core::RobotState& state)
+{
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    state.setJointVelocities(joints[joint_index], &values[joint_index]);
   }
   return;
 }
