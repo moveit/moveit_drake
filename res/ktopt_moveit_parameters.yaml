@@ -7,3 +7,13 @@ ktopt_interface:
       gt_eq<>: [1]
     }
   }
+  control_points: {
+    type: int,
+    description: "Number of control points used to represent the B-Spline",
+    default_value: 10
+  }
+  trajectory_res: {
+    type: int,
+    description: "Timestep resolution where the KTOpt trajectory is evaluated and reported",
+    default_value: 101
+  }

@@ -29,16 +29,29 @@ public:
   {
     robot_model_ = model;
     node_ = node;
-    parameter_namespace_ = parameter_namespace;
     param_listener_ = std::make_shared<ktopt_interface::ParamListener>(node, parameter_namespace);
+
+
+  // set QoS to transient local to get messages that have already been published
+  // (if robot state publisher starts before planner)
     robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
-        "robot_description", 10, std::bind(&KTOptPlannerManager::robot_description_callback, this, _1));
-    description_set_ = false;
+      "robot_description", rclcpp::QoS(1).transient_local(), [this](const std_msgs::msg::String::SharedPtr msg){
+        if (robot_description_.empty())
+        {
+          robot_description_ = msg->data;
+          RCLCPP_INFO(getLogger(), "Robot description set");
+        }
+      });
+    RCLCPP_INFO(getLogger(), "KTOpt planner manager initialized!");
     return true;
   }
 
   bool canServiceRequest(const planning_interface::MotionPlanRequest& req) const override
   {
+    if(robot_description_.empty()){
+      RCLCPP_ERROR(getLogger(), "Robot description is empty, do you have a robot state publisher running?");
+      return false;
+    }
     if (req.goal_constraints.empty())
     {
       RCLCPP_ERROR(getLogger(), "Invalid goal constraints");
@@ -50,12 +63,13 @@ public:
       RCLCPP_ERROR(getLogger(), "Invalid joint group '%s'", req.group_name.c_str());
       return false;
     }
+
     return true;
   }
 
   std::string getDescription() const override
   {
-    return "Kinematic Trajectory Optimization Planner";
+    return "KTOpt";
   }
 
   void getPlanningAlgorithms(std::vector<std::string>& algs) const override
@@ -89,22 +103,12 @@ public:
 private:
   moveit::core::RobotModelConstPtr robot_model_;
   rclcpp::Node::SharedPtr node_;
-  std::string parameter_namespace_;
   std::shared_ptr<ktopt_interface::ParamListener> param_listener_;
 
   // robot description related variables
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_description_subscriber_;
   bool description_set_;
   std::string robot_description_;
-
-  void robot_description_callback(const std_msgs::msg::String::SharedPtr msg)
-  {
-    if (!description_set_)
-    {
-      robot_description_ = msg->data;
-      description_set_ = true;
-    }
-  }
 };
 
 }  // namespace ktopt_interface

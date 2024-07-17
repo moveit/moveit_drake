@@ -11,12 +11,14 @@ namespace
 {
 rclcpp::Logger getLogger()
 {
-  return moveit::getLogger("moveit.planners.ktopt_drake.planning_context");
+  return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
 }  // namespace
 
-KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
-                                           const ktopt_interface::Params& params)
+KTOptPlanningContext::KTOptPlanningContext(
+  const std::string& name,
+  const std::string& group_name,
+  const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
 {
   // Do some drake initialization may be
@@ -31,6 +33,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
+  RCLCPP_INFO(getLogger(),
+              "Setting up and solving optimization problem ..."
+              );
   // preliminary house keeping
   const auto time_start = std::chrono::steady_clock::now();
   res.planner_id = std::string("ktopt");
@@ -38,8 +43,25 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
-  const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
-  // TODO: update plant_ state here as well
+  const moveit::core::RobotState start_state(
+    *getPlanningScene()->getCurrentStateUpdated(
+      req.start_state));
+  const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(
+    getGroupName());
+  RCLCPP_INFO_STREAM(getLogger(),
+                     "Planning for group"
+                     << getGroupName());
+  const auto& joints = group->getActiveJointModels();
+
+  // q represents the complete state (joint positions and velocities)
+  const auto q_p = toDrakePositions(start_state, joints);
+  VectorXd q_v = VectorXd::Zero(joints.size());
+  VectorXd q = VectorXd::Zero(2*joints.size());
+  q << q_p;
+  q << q_v;
+
+  // drake accepts a VectorX<T>
+  plant_->SetPositionsAndVelocities(plant_context_, q);
 
   // retrieve goal state
   moveit::core::RobotState goal_state(start_state);
@@ -52,33 +74,90 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(plant_->num_positions(), 10);
+  auto trajopt = KinematicTrajectoryOptimization(
+    plant_->num_positions(),
+    params_.control_points);
+  auto& prog = trajopt.get_mutable_prog();
 
-  // bare minimum specification
-  // TODO: Add constraints on start joint configuration
-  // TODO: Add constraint on end joint configuration or pose
-  // TODO: Add constraints on joint position/velocity/acceleration
+  // Costs
+  trajopt.AddDurationCost(1.0);
+  trajopt.AddPathLengthCost(1.0);
+  // TODO: Adds quadratic cost
+  // This acts as a secondary cost to push the solution towards joint centers
+  // prog.AddQuadraticErrorCost(
+  //   MatrixXd::Identity(joints.size(), joints.size()),
+  //   nominal_q_;
+  // );
+  // prog.AddQuadraticErrorCost();
+
+  // Constraints
+  // Add constraints on start joint configuration and velocity
+  trajopt.AddPathPositionConstraint(
+    toDrakePositions(start_state, joints),
+    toDrakePositions(start_state, joints),
+    0.0
+  );
+  trajopt.AddPathVelocityConstraint(
+    VectorXd::Zero(joints.size()),
+    VectorXd::Zero(joints.size()),
+    0.0
+  );
+  // Add constraint on end joint configuration and velocity
+  trajopt.AddPathPositionConstraint(
+    toDrakePositions(goal_state, joints),
+    toDrakePositions(goal_state, joints),
+    1.0
+  );
+  trajopt.AddPathVelocityConstraint(
+    VectorXd::Zero(joints.size()),
+    VectorXd::Zero(joints.size()),
+    1.0
+  );
+  // TODO Add constraints on joint position/velocity/acceleration
+  // trajopt.AddPositionBounds(
+  //     plant_->GetPositionLowerLimits(),
+  //     plant_->GetPositionUpperLimits());
+  // trajopt.AddVelocityBounds(
+  //     plant_->GetVelocityLowerLimits(),
+  //     plant_->GetVelocityUpperLimits());
+
+  // Add constraints on duration
+  trajopt.AddDurationConstraint(0.5, 5);
+
   // TODO: Add collision checking distance constraints
   // TODO: Add position/orientation constraints, if any specified in the motion planning request
 
   // solve the program
-  auto& prog = trajopt.get_mutable_prog();
   auto result = Solve(prog);
 
   if (!result.is_success())
   {
+    RCLCPP_ERROR(getLogger(), "Trajectory optimization failed");
     res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
     return;
   }
 
   // package up the resulting trajectory
   auto traj = trajopt.ReconstructTrajectory(result);
-  const size_t num_pts = 101;  // TODO: should be sample time based instead
+  const size_t num_pts = params_.trajectory_res;  // TODO: should be sample time based instead
   const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
+  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
+    start_state.getRobotModel(),
+    group
+  );
+  res.trajectory->clear();
+  const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() : res.trajectory->getRobotModel()->getActiveJointModels();
+
+  // sanity check
+  assert(traj.rows() == active_joints.size());
   for (double t = 0.0; t <= traj.end_time(); t += time_step)
   {
-    const auto val = traj.value(t);
-    // TODO: Put into the robot trajectory in the response.
+    const auto pos_val = traj.value(t);
+    const auto vel_val = traj.EvalDerivative(t);
+    const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
+    setJointPositions(pos_val, active_joints, *waypoint);
+    setJointVelocities(vel_val, active_joints, *waypoint);
+    res.trajectory->addSuffixWayPoint(waypoint, time_step);
   }
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
@@ -100,7 +179,15 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   std::tie(plant_, scene_graph_) = AddMultibodyPlantSceneGraph(&builder, 0.0);
 
-  auto robot_instance = Parser(plant_, scene_graph_).AddModels(robot_description_);
+  // TODO:(kamiradi) Figure out object parsing
+  // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
+
+  // HACK: For now loading directly from drake's package map
+  const char* ModelUrl =
+    "package://drake_models/franka_description/"
+    "urdf/panda_arm.urdf";
+  const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
+  auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
   plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
 
   // for now finalize plant here
@@ -110,7 +197,46 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // diagram
   auto diagram_ = builder.Build();
   diagram_context_ = diagram_->CreateDefaultContext();
-  Context<double>& plant_context_ = diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get());
+  plant_context_ = &diagram_->GetMutableSubsystemContext(
+    *plant_,
+    diagram_context_.get());
+  nominal_q_ = plant_->GetPositions(*plant_context_);
+}
+
+VectorXd KTOptPlanningContext::toDrakePositions(
+  const moveit::core::RobotState& state,
+  const Joints& joints)
+{
+  VectorXd q = VectorXd::Zero(joints.size());
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    q[joint_index] = *state.getJointPositions(joints[joint_index]);
+  }
+  return q;
+}
+
+void KTOptPlanningContext::setJointPositions(
+  const VectorXd& values,
+  const Joints& joints,
+  moveit::core::RobotState& state)
+{
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    state.setJointPositions(joints[joint_index], &values[joint_index]);
+  }
+  return;
+}
+
+void KTOptPlanningContext::setJointVelocities(
+  const VectorXd& values,
+  const Joints& joints,
+  moveit::core::RobotState& state)
+{
+  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
+  {
+    state.setJointVelocities(joints[joint_index], &values[joint_index]);
+  }
+  return;
 }
 
 void KTOptPlanningContext::clear()
