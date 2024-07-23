@@ -12,6 +12,11 @@
 #include "drake/multibody/plant/multibody_plant.h"
 #include "drake/planning/trajectory_optimization/kinematic_trajectory_optimization.h"
 #include "drake/solvers/solve.h"
+#include "drake/geometry/meshcat.h"
+#include "drake/geometry/meshcat_visualizer.h"
+#include "drake/geometry/drake_visualizer.h"
+#include "drake/geometry/meshcat_params.h"
+#include "drake/visualization/visualization_config_functions.h"
 
 namespace ktopt_interface
 {
@@ -26,6 +31,11 @@ using drake::solvers::Solve;
 using drake::systems::Diagram;
 using drake::systems::Context;
 using drake::multibody::PackageMap;
+using drake::visualization::AddDefaultVisualization;
+using drake::geometry::Meshcat;
+using drake::geometry::MeshcatVisualizer;
+using drake::geometry::MeshcatParams;
+using drake::geometry::DrakeVisualizer;
 using Eigen::VectorXd;
 using Eigen::MatrixXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
@@ -69,6 +79,13 @@ private:
     MultibodyPlant<double>* plant_{};
     std::unique_ptr<Context<double>> diagram_context_;
     Context<double>* plant_context_;
+    Context<double>* visualizer_context_;
     VectorXd nominal_q_;
+
+    // visualization
+    Meshcat meshcat;
+    MeshcatVisualizer<double>* visualizer_;
+    MeshcatParams meshcat_params;
+    // const DrakeVisualizer<double>* visualizer_;
 };
 } // namespace ktopt_interface

@@ -49,7 +49,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(
     getGroupName());
   RCLCPP_INFO_STREAM(getLogger(),
-                     "Planning for group"
+                     "Planning for group: "
                      << getGroupName());
   const auto& joints = group->getActiveJointModels();
 
@@ -150,6 +150,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // sanity check
   assert(traj.rows() == active_joints.size());
+
+  // initialize drake visualizer
+  visualizer_->StartRecording();
   for (double t = 0.0; t <= traj.end_time(); t += time_step)
   {
     const auto pos_val = traj.value(t);
@@ -158,7 +161,14 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     setJointPositions(pos_val, active_joints, *waypoint);
     setJointVelocities(vel_val, active_joints, *waypoint);
     res.trajectory->addSuffixWayPoint(waypoint, time_step);
+
+    // also try and visualise on drake's visualizer
+    diagram_context_->SetTime(t);
+    plant_->SetPositions(plant_context_, pos_val);
+    visualizer_->ForcedPublish(*visualizer_context_);
   }
+  visualizer_->StopRecording();
+  visualizer_->PublishRecording();
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
 }
@@ -177,6 +187,10 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // also perform some drake related initialisations here
   DiagramBuilder<double> builder;
 
+  // meshcat experiment
+  meshcat_params = MeshcatParams();
+  meshcat = Meshcat(meshcat_params);
+
   std::tie(plant_, scene_graph_) = AddMultibodyPlantSceneGraph(&builder, 0.0);
 
   // TODO:(kamiradi) Figure out object parsing
@@ -193,6 +207,17 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // for now finalize plant here
   plant_->Finalize();
 
+  // adds default visualization
+  visualizer_ = drake::geometry::MeshcatVisualizerd::AddToBuilder(
+    &builder,
+    scene_graph_,
+    meshcat);
+  // AddDefaultVisualization(&builder);
+  // visualizer_ = &drake::geometry::DrakeVisualizerd::AddToBuilder(
+  //   &builder,
+  //   *scene_graph_
+  // );
+
   // in the future you can add other LeafSystems here. For now building the
   // diagram
   auto diagram_ = builder.Build();
@@ -200,6 +225,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   plant_context_ = &diagram_->GetMutableSubsystemContext(
     *plant_,
     diagram_context_.get());
+  visualizer_context_ = &diagram_->GetMutableSubsystemContext(
+    *visualizer_,
+    diagram_context_.get());
+  // plant_context_ = &plant_->GetMyMutableContextFromRoot(diagram_context_.get());
+  // visualizer_context_ = &visualizer_->GetMyMutableContextFromRoot(diagram_context_.get());
   nominal_q_ = plant_->GetPositions(*plant_context_);
 }
 
