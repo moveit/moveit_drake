@@ -72,7 +72,7 @@ def launch_setup(context, *args, **kwargs):
     }
 
     drake_ktopt_planning_pipeline_config = {
-        "drake": {
+        "drake_ktopt": {
             "planning_plugins": [
                 "ktopt_interface/KTOptPlanner",
             ],
@@ -89,6 +89,25 @@ def launch_setup(context, *args, **kwargs):
         }
     }
 
+    drake_toppra_planning_pipeline_config = {
+        "drake_toppra": {
+            "planning_plugins": [
+                "ompl_interface/OMPLPlanner",
+            ],
+            "request_adapters": [
+                "default_planning_request_adapters/ResolveConstraintFrames",
+                "default_planning_request_adapters/ValidateWorkspaceBounds",
+                "default_planning_request_adapters/CheckStartStateBounds",
+                "default_planning_request_adapters/CheckStartStateCollision",
+            ],
+            "response_adapters": [
+                "moveit/drake/AddToppraTimeParameterization",
+                "default_planning_response_adapters/ValidateSolution",
+                "default_planning_response_adapters/DisplayMotionPath",
+            ],
+        }
+    }
+
     # MoveitCpp demo with drake
     moveit_cpp_node = Node(
         name="pipeline_testbench_example",
@@ -98,6 +117,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             moveit_config.to_dict(),
             drake_ktopt_planning_pipeline_config,
+            drake_toppra_planning_pipeline_config,
             warehouse_ros_config,
         ],
     )
