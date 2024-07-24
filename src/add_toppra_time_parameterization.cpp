@@ -53,7 +53,7 @@ namespace moveit::drake
 
 /**
  * @brief TODO
- * 
+ *
  */
 class AddToppraTimeParameterization : public planning_interface::PlanningResponseAdapter
 {
@@ -103,7 +103,7 @@ public:
         static_cast<double>(xx), static_cast<double>(yy), 0.});
     plant.WeldFrames(plant.world_frame(), base_frame, X_WB);
 
-    // TODO Add collision information 
+    // TODO Add collision information
 
     plant.Finalize();
 
@@ -112,7 +112,7 @@ public:
     grid_points = Toppra.CalcGridPoints(gcs_traj, CalcGridPointsOptions())
     toppra = Toppra(gcs_traj, plant, grid_points)
     toppra.AddJointVelocityLimit(velocity_lb, velocity_ub)
-    toppra.AddJointAccelerationLimit(accel_lb, accel_ub)        
+    toppra.AddJointAccelerationLimit(accel_lb, accel_ub)
     toppra_times = toppra.SolvePathParameterization()*/
 
     if (false /* TODO*/)

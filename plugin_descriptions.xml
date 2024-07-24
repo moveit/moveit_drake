@@ -10,7 +10,7 @@
   <!-- TOPPRA adapter -->
   <class name="moveit/drake/AddToppraTimeParameterization" type="moveit::drake::AddToppraTimeParameterization" base_class_type="planning_interface::PlanningResponseAdapter">
     <description>
-      Adapter to check the request path validity (collision avoidance, feasibility and constraint satisfaction).
+      Given a path, add time parameterization with TOPRRA.
     </description>
   </class>
 </library>
