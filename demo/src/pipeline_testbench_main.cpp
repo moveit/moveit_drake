@@ -326,7 +326,8 @@ int main(int argc, char** argv)
         {
         { "ompl", "RRTConnectkConfigDefault" },
         { "stomp", "stomp" },
-        { "drake", ""} },
+        { "drake_ktop", ""},
+        { "drake_toppra", ""} },
         motion_plan_req);
   }
 

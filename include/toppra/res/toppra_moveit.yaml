@@ -1,6 +1,0 @@
-toppra_moveit:
-  robot_description: {
-    type: string,
-    description: "Robot URDF",
-    default_value: "",
-  }

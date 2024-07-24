@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2023, PickNik Inc.
+ *  Copyright (c) 2024, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #include "drake/multibody/plant/multibody_plant.h"
 
 namespace moveit::drake {
-    [[nodiscard]] drake::multibody::MultibodyPlant createMultibodyPlant(){
+    [[nodiscard]] drake::multibody::MultibodyPlant createMultibodyPlant(const std::string robot_description){
         // TODO
     }
 }
