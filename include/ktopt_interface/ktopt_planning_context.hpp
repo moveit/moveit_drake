@@ -16,76 +16,63 @@
 #include "drake/geometry/meshcat_visualizer.h"
 #include "drake/geometry/drake_visualizer.h"
 #include "drake/geometry/meshcat_params.h"
+#include "drake/visualization/visualization_config.h"
 #include "drake/visualization/visualization_config_functions.h"
 
 namespace ktopt_interface
 {
 // declare all namespaces to be used
-using drake::multibody::MultibodyPlant;
-using drake::multibody::AddMultibodyPlantSceneGraph;
+using drake::geometry::Meshcat;
+using drake::geometry::MeshcatParams;
+using drake::geometry::MeshcatVisualizer;
+using drake::geometry::MeshcatVisualizerParams;
 using drake::geometry::SceneGraph;
-using drake::systems::DiagramBuilder;
+using drake::multibody::AddMultibodyPlantSceneGraph;
+using drake::multibody::MultibodyPlant;
+using drake::multibody::PackageMap;
 using drake::multibody::Parser;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
-using drake::systems::Diagram;
 using drake::systems::Context;
-using drake::multibody::PackageMap;
-using drake::visualization::AddDefaultVisualization;
-using drake::geometry::Meshcat;
-using drake::geometry::MeshcatVisualizer;
-using drake::geometry::MeshcatParams;
-using drake::geometry::DrakeVisualizer;
-using Eigen::VectorXd;
+using drake::systems::Diagram;
+using drake::systems::DiagramBuilder;
+using drake::visualization::ApplyVisualizationConfig;
+using drake::visualization::VisualizationConfig;
 using Eigen::MatrixXd;
+using Eigen::VectorXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
 {
 public:
-    KTOptPlanningContext(
-        const std::string& name,
-        const std::string& group_name,
-        const ktopt_interface::Params& params);
+  KTOptPlanningContext(const std::string& name, const std::string& group_name, const ktopt_interface::Params& params);
 
-    void solve(
-        planning_interface::MotionPlanResponse& res) override;
-    void solve(
-        planning_interface::MotionPlanDetailedResponse& res) override;
+  void solve(planning_interface::MotionPlanResponse& res) override;
+  void solve(planning_interface::MotionPlanDetailedResponse& res) override;
 
-    bool terminate() override;
-    void clear() override;
+  bool terminate() override;
+  void clear() override;
 
-    void setRobotDescription(std::string robot_description);
-    VectorXd toDrakePositions(
-        const moveit::core::RobotState& state,
-        const Joints& joints);
-    void setJointPositions(
-        const VectorXd& values,
-        const Joints& joints,
-        moveit::core::RobotState& state);
-    void setJointVelocities(
-        const VectorXd& values,
-        const Joints& joints,
-        moveit::core::RobotState& state);
-
+  void setRobotDescription(std::string robot_description);
+  VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
+  void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
+  void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
 
 private:
-    const ktopt_interface::Params params_;
-    std::string robot_description_;
+  const ktopt_interface::Params params_;
+  std::string robot_description_;
 
-    // drake related variables
-    SceneGraph<double>* scene_graph_{};
-    MultibodyPlant<double>* plant_{};
-    std::unique_ptr<Context<double>> diagram_context_;
-    Context<double>* plant_context_;
-    Context<double>* visualizer_context_;
-    VectorXd nominal_q_;
+  // drake related variables
+  SceneGraph<double>* scene_graph_{};
+  MultibodyPlant<double>* plant_{};
+  std::unique_ptr<Diagram<double>> diagram_;
+  std::unique_ptr<Context<double>> diagram_context_;
+  Context<double>* plant_context_{};
+  Context<double>* visualizer_context_{};
+  VectorXd nominal_q_;
 
-    // visualization
-    Meshcat meshcat;
-    MeshcatVisualizer<double>* visualizer_;
-    MeshcatParams meshcat_params;
-    // const DrakeVisualizer<double>* visualizer_;
+  // visualization
+  std::shared_ptr<Meshcat> meshcat_;
+  MeshcatVisualizer<double>* visualizer_;
 };
-} // namespace ktopt_interface
+}  // namespace ktopt_interface

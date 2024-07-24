@@ -322,12 +322,8 @@ int main(int argc, char** argv)
   RCLCPP_INFO(LOGGER, "Starting Pipeline Testbench example ...");
   for (const auto& motion_plan_req : demo.getMotionPlanRequests())
   {
-    demo.planAndVisualize(
-        {
-        { "ompl", "RRTConnectkConfigDefault" },
-        { "stomp", "stomp" },
-        { "drake", ""} },
-        motion_plan_req);
+    demo.planAndVisualize({ { "ompl", "RRTConnectkConfigDefault" }, { "stomp", "stomp" }, { "drake", "" } },
+                          motion_plan_req);
   }
 
   demo.getVisualTools().prompt("Press 'next' in the RvizVisualToolsGui window to finish the demo");
