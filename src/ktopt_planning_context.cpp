@@ -15,10 +15,8 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 
-KTOptPlanningContext::KTOptPlanningContext(
-  const std::string& name,
-  const std::string& group_name,
-  const ktopt_interface::Params& params)
+KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
+                                           const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
 {
   // Do some drake initialization may be
@@ -33,9 +31,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&
 
 void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
-  RCLCPP_INFO(getLogger(),
-              "Setting up and solving optimization problem ..."
-              );
+  RCLCPP_INFO(getLogger(), "Setting up and solving optimization problem ...");
   // preliminary house keeping
   const auto time_start = std::chrono::steady_clock::now();
   res.planner_id = std::string("ktopt");
@@ -43,20 +39,15 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
-  const moveit::core::RobotState start_state(
-    *getPlanningScene()->getCurrentStateUpdated(
-      req.start_state));
-  const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(
-    getGroupName());
-  RCLCPP_INFO_STREAM(getLogger(),
-                     "Planning for group"
-                     << getGroupName());
+  const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
+  const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
+  RCLCPP_INFO_STREAM(getLogger(), "Planning for group" << getGroupName());
   const auto& joints = group->getActiveJointModels();
 
   // q represents the complete state (joint positions and velocities)
   const auto q_p = toDrakePositions(start_state, joints);
   VectorXd q_v = VectorXd::Zero(joints.size());
-  VectorXd q = VectorXd::Zero(2*joints.size());
+  VectorXd q = VectorXd::Zero(2 * joints.size());
   q << q_p;
   q << q_v;
 
@@ -74,9 +65,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(
-    plant_->num_positions(),
-    params_.control_points);
+  auto trajopt = KinematicTrajectoryOptimization(plant_->num_positions(), params_.control_points);
   auto& prog = trajopt.get_mutable_prog();
 
   // Costs
@@ -92,27 +81,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Constraints
   // Add constraints on start joint configuration and velocity
-  trajopt.AddPathPositionConstraint(
-    toDrakePositions(start_state, joints),
-    toDrakePositions(start_state, joints),
-    0.0
-  );
-  trajopt.AddPathVelocityConstraint(
-    VectorXd::Zero(joints.size()),
-    VectorXd::Zero(joints.size()),
-    0.0
-  );
+  trajopt.AddPathPositionConstraint(toDrakePositions(start_state, joints), toDrakePositions(start_state, joints), 0.0);
+  trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 0.0);
   // Add constraint on end joint configuration and velocity
-  trajopt.AddPathPositionConstraint(
-    toDrakePositions(goal_state, joints),
-    toDrakePositions(goal_state, joints),
-    1.0
-  );
-  trajopt.AddPathVelocityConstraint(
-    VectorXd::Zero(joints.size()),
-    VectorXd::Zero(joints.size()),
-    1.0
-  );
+  trajopt.AddPathPositionConstraint(toDrakePositions(goal_state, joints), toDrakePositions(goal_state, joints), 1.0);
+  trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 1.0);
   // TODO Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
   //     plant_->GetPositionLowerLimits(),
@@ -141,12 +114,10 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto traj = trajopt.ReconstructTrajectory(result);
   const size_t num_pts = params_.trajectory_res;  // TODO: should be sample time based instead
   const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
-  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
-    start_state.getRobotModel(),
-    group
-  );
+  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), group);
   res.trajectory->clear();
-  const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() : res.trajectory->getRobotModel()->getActiveJointModels();
+  const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() :
+                                                           res.trajectory->getRobotModel()->getActiveJointModels();
 
   // sanity check
   assert(traj.rows() == active_joints.size());
@@ -165,8 +136,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
 bool KTOptPlanningContext::terminate()
 {
-  RCLCPP_ERROR(getLogger(),
-               "KTOptPlanningContext::terminate() is not implemented!");
+  RCLCPP_ERROR(getLogger(), "KTOptPlanningContext::terminate() is not implemented!");
   return true;
 }
 
@@ -183,9 +153,8 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
   // HACK: For now loading directly from drake's package map
-  const char* ModelUrl =
-    "package://drake_models/franka_description/"
-    "urdf/panda_arm.urdf";
+  const char* ModelUrl = "package://drake_models/franka_description/"
+                         "urdf/panda_arm.urdf";
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
   auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
   plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
@@ -197,15 +166,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // diagram
   auto diagram_ = builder.Build();
   diagram_context_ = diagram_->CreateDefaultContext();
-  plant_context_ = &diagram_->GetMutableSubsystemContext(
-    *plant_,
-    diagram_context_.get());
+  plant_context_ = &diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get());
   nominal_q_ = plant_->GetPositions(*plant_context_);
 }
 
-VectorXd KTOptPlanningContext::toDrakePositions(
-  const moveit::core::RobotState& state,
-  const Joints& joints)
+VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)
 {
   VectorXd q = VectorXd::Zero(joints.size());
   for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
@@ -215,10 +180,8 @@ VectorXd KTOptPlanningContext::toDrakePositions(
   return q;
 }
 
-void KTOptPlanningContext::setJointPositions(
-  const VectorXd& values,
-  const Joints& joints,
-  moveit::core::RobotState& state)
+void KTOptPlanningContext::setJointPositions(const VectorXd& values, const Joints& joints,
+                                             moveit::core::RobotState& state)
 {
   for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
   {
@@ -227,10 +190,8 @@ void KTOptPlanningContext::setJointPositions(
   return;
 }
 
-void KTOptPlanningContext::setJointVelocities(
-  const VectorXd& values,
-  const Joints& joints,
-  moveit::core::RobotState& state)
+void KTOptPlanningContext::setJointVelocities(const VectorXd& values, const Joints& joints,
+                                              moveit::core::RobotState& state)
 {
   for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
   {
@@ -241,8 +202,7 @@ void KTOptPlanningContext::setJointVelocities(
 
 void KTOptPlanningContext::clear()
 {
-  RCLCPP_ERROR(getLogger(),
-               "KTOptPlanningContext::clear() is not implemented!");
+  RCLCPP_ERROR(getLogger(), "KTOptPlanningContext::clear() is not implemented!");
   // do something
 }
 }  // namespace ktopt_interface
