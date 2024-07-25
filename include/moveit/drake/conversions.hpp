@@ -38,8 +38,10 @@
 
 #include "drake/multibody/plant/multibody_plant.h"
 
-namespace moveit::drake {
-    [[nodiscard]] drake::multibody::MultibodyPlant createMultibodyPlant(const std::string robot_description){
-        // TODO
-    }
+namespace moveit::drake
+{
+[[nodiscard]] drake::multibody::MultibodyPlant createMultibodyPlant(const std::string robot_description)
+{
+  // TODO
 }
+}  // namespace moveit::drake

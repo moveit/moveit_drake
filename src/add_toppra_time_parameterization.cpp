@@ -127,11 +127,10 @@ public:
   }
 
 protected:
-  //std::unique_ptr<default_response_adapter_parameters::ParamListener> param_listener_;
+  // std::unique_ptr<default_response_adapter_parameters::ParamListener> param_listener_;
   rclcpp::Logger logger_;
 };
 
 }  // namespace moveit::drake
 
-CLASS_LOADER_REGISTER_CLASS(moveit::drake::AddToppraTimeParameterization,
-                            planning_interface::PlanningResponseAdapter)
+CLASS_LOADER_REGISTER_CLASS(moveit::drake::AddToppraTimeParameterization, planning_interface::PlanningResponseAdapter)
