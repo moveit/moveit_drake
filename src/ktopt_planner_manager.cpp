@@ -31,24 +31,24 @@ public:
     node_ = node;
     param_listener_ = std::make_shared<ktopt_interface::ParamListener>(node, parameter_namespace);
 
-
-  // set QoS to transient local to get messages that have already been published
-  // (if robot state publisher starts before planner)
+    // set QoS to transient local to get messages that have already been published
+    // (if robot state publisher starts before planner)
     robot_description_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
-      "robot_description", rclcpp::QoS(1).transient_local(), [this](const std_msgs::msg::String::SharedPtr msg){
-        if (robot_description_.empty())
-        {
-          robot_description_ = msg->data;
-          RCLCPP_INFO(getLogger(), "Robot description set");
-        }
-      });
+        "robot_description", rclcpp::QoS(1).transient_local(), [this](const std_msgs::msg::String::SharedPtr msg) {
+          if (robot_description_.empty())
+          {
+            robot_description_ = msg->data;
+            RCLCPP_INFO(getLogger(), "Robot description set");
+          }
+        });
     RCLCPP_INFO(getLogger(), "KTOpt planner manager initialized!");
     return true;
   }
 
   bool canServiceRequest(const planning_interface::MotionPlanRequest& req) const override
   {
-    if(robot_description_.empty()){
+    if (robot_description_.empty())
+    {
       RCLCPP_ERROR(getLogger(), "Robot description is empty, do you have a robot state publisher running?");
       return false;
     }
