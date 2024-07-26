@@ -109,7 +109,7 @@ public:
     block_pose.position.z = 0.5;
     block_pose.position.y = -0.3;
     block_pose.position.x = 0.3;
-    visual_tools_.publishCollisionBlock(block_pose, "test_block", 0.25);
+    visual_tools_.publishCollisionBlock(block_pose, "test_block", 0.15);
 
   }
 

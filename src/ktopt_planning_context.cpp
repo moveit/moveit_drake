@@ -201,6 +201,38 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   visualizer_->ForcedPublish(vis_context);
 }
 
+void KTOptPlanningContext::addCollisionObjects(const planning_scene::PlanningScene& planning_scene,
+                                               MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph)
+{
+  RCLCPP_ERROR(getLogger(), "KTOptPlanningContext::clear() is not implemented!");
+  for (const auto& object : planning_scene.getWorld()->getObjectIds())
+  {
+    const auto& collision_object = planning_scene.getWorld()->getObject(object);
+    for (const auto& shape : collision_object->shapes_)
+    {
+      const auto& pose = collision_object->shape_poses_[0];
+      // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
+      // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
+
+      // # scene_graph.RegisterGeometry
+      const SourceId box_source_id = scene_graph.RegisterSource("box1");
+      const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
+      const GeometryId box_geom_id = scene_graph.RegisterGeometry(
+        box_source_id, box_frame_id,
+        std::make_unique<GeometryInstance>(
+          RigidTransformd(),
+          std::make_unique<Box>(
+            0.15,
+            0.15,
+            0.15),
+          "box"
+        ));//hard coded for now because I know it is a box
+
+
+    }
+  }
+}
+
 VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)
 {
   VectorXd q = VectorXd::Zero(joints.size());

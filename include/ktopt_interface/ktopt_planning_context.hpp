@@ -16,6 +16,9 @@
 #include "drake/geometry/meshcat_visualizer.h"
 #include "drake/geometry/drake_visualizer.h"
 #include "drake/geometry/meshcat_params.h"
+#include "drake/geometry/geometry_frame.h"
+#include "drake/geometry/geometry_instance.h"
+#include "drake/geometry/geometry_roles.h"
 #include "drake/visualization/visualization_config.h"
 #include "drake/visualization/visualization_config_functions.h"
 
@@ -27,6 +30,16 @@ using drake::geometry::MeshcatParams;
 using drake::geometry::MeshcatVisualizer;
 using drake::geometry::MeshcatVisualizerParams;
 using drake::geometry::SceneGraph;
+using drake::geometry::FrameId;
+using drake::geometry::SourceId;
+using drake::geometry::GeometryId;
+using drake::geometry::GeometryInstance;
+using drake::geometry::GeometryFrame;
+using drake::geometry::AddRigidHydroelasticProperties;
+using drake::geometry::IllustrationProperties;
+using drake::geometry::ProximityProperties;
+using drake::geometry::Role;
+using drake::geometry::Box;
 using drake::multibody::AddMultibodyPlantSceneGraph;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
@@ -38,6 +51,7 @@ using drake::systems::Diagram;
 using drake::systems::DiagramBuilder;
 using drake::visualization::ApplyVisualizationConfig;
 using drake::visualization::VisualizationConfig;
+using drake::math::RigidTransformd;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
@@ -57,6 +71,8 @@ public:
   VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
+  void addCollisionObjects(const planning_scene::PlanningScene& planning_scene,
+                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
 
 private:
   const ktopt_interface::Params params_;
