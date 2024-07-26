@@ -5,6 +5,7 @@
 #include <moveit/moveit_cpp/planning_component.h>
 
 #include <geometry_msgs/msg/point_stamped.h>
+#include <geometry_msgs/msg/pose.h>
 
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
@@ -103,6 +104,13 @@ public:
     text_pose.translation().z() = 1.75;
     visual_tools_.publishText(text_pose, "Pipeline Testbench", rvt::WHITE, rvt::XLARGE);
     visual_tools_.trigger();
+
+    geometry_msgs::msg::Pose block_pose;
+    block_pose.position.z = 0.5;
+    block_pose.position.y = -0.3;
+    block_pose.position.x = 0.3;
+    visual_tools_.publishCollisionBlock(block_pose, "test_block", 0.25);
+
   }
 
   bool loadPlanningSceneAndQuery()
