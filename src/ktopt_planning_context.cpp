@@ -15,6 +15,9 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 
+// const std::string KTOptPlanningContext::OCTOMAP_NS = "<octomap>";
+
+
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
                                            const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
@@ -176,6 +179,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
   plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
 
+  // planning scene transcription
+  const auto scene = getPlanningScene();
+  transcribePlanningScene(*scene, *plant_, *scene_graph_);
+
+
   // for now finalize plant here
   plant_->Finalize();
 
@@ -201,34 +209,43 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   visualizer_->ForcedPublish(vis_context);
 }
 
-void KTOptPlanningContext::addCollisionObjects(const planning_scene::PlanningScene& planning_scene,
+void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
                                                MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph)
 {
-  RCLCPP_ERROR(getLogger(), "KTOptPlanningContext::clear() is not implemented!");
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
-    for (const auto& shape : collision_object->shapes_)
+    if (!collision_object)
     {
-      const auto& pose = collision_object->shape_poses_[0];
-      // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
-      // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
+      RCLCPP_ERROR(getLogger(), "No collision object");
+      return;
+    }
+    if (object != OCTOMAP_NS)
+    {
+      RCLCPP_ERROR(getLogger(), "skipping octomap for now ...");
+      for (const auto& shape : collision_object->shapes_)
+      {
+        RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
+        const auto& pose = collision_object->shape_poses_[0];
+        // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
+        // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
 
-      // # scene_graph.RegisterGeometry
-      const SourceId box_source_id = scene_graph.RegisterSource("box1");
-      const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
-      const GeometryId box_geom_id = scene_graph.RegisterGeometry(
-        box_source_id, box_frame_id,
-        std::make_unique<GeometryInstance>(
-          RigidTransformd(),
-          std::make_unique<Box>(
-            0.15,
-            0.15,
-            0.15),
-          "box"
-        ));//hard coded for now because I know it is a box
+        // # scene_graph.RegisterGeometry
+        const SourceId box_source_id = scene_graph.RegisterSource("box1");
+        const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
+        const GeometryId box_geom_id = scene_graph.RegisterGeometry(
+          box_source_id, box_frame_id,
+          std::make_unique<GeometryInstance>(
+            RigidTransformd(),
+            std::make_unique<Box>(
+              0.15,
+              0.15,
+              0.15),
+            "box"
+          )); //hard coded for now because I know it is a box
 
-
+        // TODO: Still need to add proximity properties
+      }
     }
   }
 }

@@ -19,6 +19,7 @@
 #include "drake/geometry/geometry_frame.h"
 #include "drake/geometry/geometry_instance.h"
 #include "drake/geometry/geometry_roles.h"
+#include "drake/geometry/proximity_properties.h"
 #include "drake/visualization/visualization_config.h"
 #include "drake/visualization/visualization_config_functions.h"
 
@@ -71,8 +72,6 @@ public:
   VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
-  void addCollisionObjects(const planning_scene::PlanningScene& planning_scene,
-                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
 
 private:
   const ktopt_interface::Params params_;
@@ -86,9 +85,12 @@ private:
   Context<double>* plant_context_{};
   Context<double>* visualizer_context_{};
   VectorXd nominal_q_;
+  std::string OCTOMAP_NS = "<octomap>";
 
   // visualization
   std::shared_ptr<Meshcat> meshcat_;
   MeshcatVisualizer<double>* visualizer_;
+  void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
+                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
 };
 }  // namespace ktopt_interface
