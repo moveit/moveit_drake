@@ -39,6 +39,7 @@ using drake::geometry::GeometryFrame;
 using drake::geometry::AddRigidHydroelasticProperties;
 using drake::geometry::IllustrationProperties;
 using drake::geometry::ProximityProperties;
+using drake::geometry::PerceptionProperties;
 using drake::geometry::Role;
 using drake::geometry::Box;
 using drake::multibody::AddMultibodyPlantSceneGraph;
@@ -55,6 +56,7 @@ using drake::visualization::VisualizationConfig;
 using drake::math::RigidTransformd;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+using Eigen::Vector3d;
 using Joints = std::vector<const moveit::core::JointModel*>;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
@@ -72,6 +74,8 @@ public:
   VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
+  void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
+                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
 
 private:
   const ktopt_interface::Params params_;
@@ -90,7 +94,5 @@ private:
   // visualization
   std::shared_ptr<Meshcat> meshcat_;
   MeshcatVisualizer<double>* visualizer_;
-  void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
-                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
 };
 }  // namespace ktopt_interface

@@ -212,6 +212,23 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
                                                MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph)
 {
+  RCLCPP_INFO(getLogger(), "trying something ...");
+  // debugging planning scene
+  try
+  {
+    if (!planning_scene)
+    {
+      RCLCPP_INFO(getLogger(), "Nothing inside planning scene");
+    }
+    else
+    {
+      auto world = planning_scene.getWorld();
+    }
+  }
+  catch (const std::exception& e)
+  {
+    RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
+  }
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
@@ -230,21 +247,39 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
         // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
 
-        // # scene_graph.RegisterGeometry
+        // Creates a box geoemtry and ancors it to the world origin. Better
+        // approach is to create a ground object, anchor that, and then anchor
+        // every non-moving entity to the ground plan
+        // TODO: Create and anchor ground entity
+        Vector3d p(0.3, -0.3, 0.5);
         const SourceId box_source_id = scene_graph.RegisterSource("box1");
         const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
-        const GeometryId box_geom_id = scene_graph.RegisterGeometry(
-          box_source_id, box_frame_id,
+        const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+          box_source_id,
           std::make_unique<GeometryInstance>(
-            RigidTransformd(),
+            RigidTransformd(p),
             std::make_unique<Box>(
               0.15,
               0.15,
               0.15),
             "box"
-          )); //hard coded for now because I know it is a box
+          )); //hard coded for now because I know box dimensions and pose, from
+        // pipline testbench
+        // const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+        //   box_source_id, box_frame_id,
+        //   std::make_unique<GeometryInstance>(
+        //     RigidTransformd(p),
+        //     std::make_unique<Box>(
+        //       0.15,
+        //       0.15,
+        //       0.15),
+        //     "box"
+        //   )); //hard coded for now because I know box dimensions and pose, from
 
-        // TODO: Still need to add proximity properties
+        // add illustration, proximity, perception properties
+        scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+        scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+        scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
       }
     }
   }
