@@ -46,6 +46,7 @@ using drake::multibody::AddMultibodyPlantSceneGraph;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
 using drake::multibody::Parser;
+using drake::multibody::MultibodyPlant;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Context;
@@ -74,20 +75,20 @@ public:
   VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
-  void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
-                           MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph);
+  void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
 
 private:
   const ktopt_interface::Params params_;
   std::string robot_description_;
 
   // drake related variables
-  SceneGraph<double>* scene_graph_{};
-  MultibodyPlant<double>* plant_{};
+  // SceneGraph<double>* scene_graph_{};
+  // MultibodyPlant<double>* plant_{};
   std::unique_ptr<Diagram<double>> diagram_;
+  std::unique_ptr<DiagramBuilder<double>> builder;
   std::unique_ptr<Context<double>> diagram_context_;
-  Context<double>* plant_context_{};
-  Context<double>* visualizer_context_{};
+  // Context<double>* plant_context_{};
+  // Context<double>* visualizer_context_{};
   VectorXd nominal_q_;
   std::string OCTOMAP_NS = "<octomap>";
 

@@ -40,6 +40,13 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   res.planner_id = std::string("ktopt");
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
+  // dome drake related scope initialisations
+  const auto& plant_ = 
+    dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
+  const auto& scene_graph_ =
+    dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
+
+
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
@@ -55,7 +62,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   q << q_v;
 
   // drake accepts a VectorX<T>
-  plant_->SetPositionsAndVelocities(plant_context_, q);
+  auto& plant_context_ = diagram_->GetMutableSubsystemContext(plant_, diagram_context_.get());
+  plant_.SetPositionsAndVelocities(&plant_context_, q);
 
   // retrieve goal state
   moveit::core::RobotState goal_state(start_state);
@@ -68,7 +76,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(plant_->num_positions(), params_.control_points);
+  auto trajopt = KinematicTrajectoryOptimization(plant_.num_positions(), params_.control_points);
   auto& prog = trajopt.get_mutable_prog();
 
   // Costs
@@ -135,7 +143,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     setJointVelocities(vel_val, active_joints, *waypoint);
     res.trajectory->addSuffixWayPoint(waypoint, time_step);
 
-    plant_->SetPositions(plant_context_, pos_val);
+    plant_.SetPositions(&plant_context_, pos_val);
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
 
@@ -159,15 +167,16 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   robot_description_ = robot_description;
 
   // also perform some drake related initialisations here
-  DiagramBuilder<double> builder;
+  // DiagramBuilder<double> builder;
+  builder = std::make_unique<DiagramBuilder<double>>();
 
   // meshcat experiment
   const auto meshcat_params = MeshcatParams();
   meshcat_ = std::make_shared<Meshcat>(meshcat_params);
 
-  auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(&builder, 0.0);
-  plant_ = &plant;
-  scene_graph_ = &scene_graph;
+  auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(builder.get(), 0.0);
+  // plant_ = &plant;
+  // scene_graph_ = &scene_graph;
 
   // TODO:(kamiradi) Figure out object parsing
   // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
@@ -176,59 +185,62 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   const char* ModelUrl = "package://drake_models/franka_description/"
                          "urdf/panda_arm.urdf";
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
-  auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
-  plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
+  auto robot_instance = Parser(&plant, &scene_graph).AddModels(urdf);
+  plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
 
   // planning scene transcription
   const auto scene = getPlanningScene();
-  transcribePlanningScene(*scene, *plant_, *scene_graph_);
+  transcribePlanningScene(*scene);
 
 
   // for now finalize plant here
-  plant_->Finalize();
+  plant.Finalize();
 
   // Apply MeshCat visualization
   VisualizationConfig config;
-  ApplyVisualizationConfig(config, &builder, /*lcm_buses*/ nullptr, plant_, scene_graph_, meshcat_);
+  ApplyVisualizationConfig(config, builder.get(), /*lcm_buses*/ nullptr, &plant, &scene_graph, meshcat_);
 
   MeshcatVisualizerParams meshcat_viz_params;
   auto& visualizer =
-      MeshcatVisualizer<double>::AddToBuilder(&builder, *scene_graph_, meshcat_, std::move(meshcat_viz_params));
+      MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_,
+                                              std::move(meshcat_viz_params));
   visualizer_ = &visualizer;
 
   // in the future you can add other LeafSystems here. For now building the
   // diagram
-  diagram_ = builder.Build();
+  diagram_ = builder->Build();
   diagram_context_ = diagram_->CreateDefaultContext();
-  auto& plant_context = diagram_->GetMutableSubsystemContext(*plant_, diagram_context_.get());
-  plant_context_ = &plant_context;
+  auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
 
-  nominal_q_ = plant_->GetPositions(*plant_context_);
+  nominal_q_ = plant.GetPositions(plant_context);
 
   auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
   visualizer_->ForcedPublish(vis_context);
 }
 
-void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene,
-                                               MultibodyPlant<double>& plant, SceneGraph<double>& scene_graph)
+void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
   RCLCPP_INFO(getLogger(), "trying something ...");
   // debugging planning scene
-  try
-  {
-    if (!planning_scene)
-    {
-      RCLCPP_INFO(getLogger(), "Nothing inside planning scene");
-    }
-    else
-    {
-      auto world = planning_scene.getWorld();
-    }
-  }
-  catch (const std::exception& e)
-  {
-    RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
-  }
+  // try
+  // {
+  //   if (planning_scene->isEmpty())
+  //   {
+  //     RCLCPP_INFO(getLogger(), "Nothing inside planning scene");
+  //   }
+  //   else
+  //   {
+  //     auto world = planning_scene.getWorld();
+  //   }
+  // }
+  // catch (const std::exception& e)
+  // {
+  //   RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
+  // }
+  auto& plant =
+    dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
+  auto& scene_graph =
+    dynamic_cast<SceneGraph<double>&>(builder->GetMutableSubsystemByName("scene_graph"));
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
