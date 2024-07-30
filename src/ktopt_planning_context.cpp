@@ -221,22 +221,14 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
   RCLCPP_INFO(getLogger(), "trying something ...");
-  // debugging planning scene
-  // try
-  // {
-  //   if (planning_scene->isEmpty())
-  //   {
-  //     RCLCPP_INFO(getLogger(), "Nothing inside planning scene");
-  //   }
-  //   else
-  //   {
-  //     auto world = planning_scene.getWorld();
-  //   }
-  // }
-  // catch (const std::exception& e)
-  // {
-  //   RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
-  // }
+  try
+  {
+    auto world = planning_scene.getWorld();
+  }
+  catch (const std::exception& e)
+  {
+    RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
+  }
   auto& plant =
     dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
   auto& scene_graph =
@@ -265,7 +257,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         // TODO: Create and anchor ground entity
         Vector3d p(0.3, -0.3, 0.5);
         const SourceId box_source_id = scene_graph.RegisterSource("box1");
-        const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
+        // const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
         const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
           box_source_id,
           std::make_unique<GeometryInstance>(
