@@ -121,8 +121,27 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     return;
   }
 
+  RCLCPP_INFO(getLogger(), "Setting initial guess ...");
+  // set the initial guess
+  trajopt.SetInitialGuess(trajopt.ReconstructTrajectory(result));
+  // const auto& collision_constraint = MinimumDistanceLowerBoundConstraint(&plant_, 0.01, &plant_context_);
+
+  // add collision constraints
+  for (double s = 0.0; s <=25.0; s++)
+  {
+    trajopt.AddPathPositionConstraint(
+      std::make_shared<MinimumDistanceLowerBoundConstraint>(
+        &plant_,
+        0.01,
+        &plant_context_),
+      s/25.0);
+  }
+  
+  // collision free trajectory
+  auto collision_free_result = Solve(prog);
+
   // package up the resulting trajectory
-  auto traj = trajopt.ReconstructTrajectory(result);
+  auto traj = trajopt.ReconstructTrajectory(collision_free_result);
   const size_t num_pts = params_.trajectory_res;  // TODO: should be sample time based instead
   const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
   res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), group);

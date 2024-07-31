@@ -22,6 +22,7 @@
 #include "drake/geometry/proximity_properties.h"
 #include "drake/visualization/visualization_config.h"
 #include "drake/visualization/visualization_config_functions.h"
+#include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
 
 namespace ktopt_interface
 {
@@ -47,6 +48,7 @@ using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
 using drake::multibody::Parser;
 using drake::multibody::MultibodyPlant;
+using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Context;
