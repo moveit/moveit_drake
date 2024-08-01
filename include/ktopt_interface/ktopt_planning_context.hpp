@@ -84,13 +84,9 @@ private:
   std::string robot_description_;
 
   // drake related variables
-  // SceneGraph<double>* scene_graph_{};
-  // MultibodyPlant<double>* plant_{};
   std::unique_ptr<Diagram<double>> diagram_;
   std::unique_ptr<DiagramBuilder<double>> builder;
   std::unique_ptr<Context<double>> diagram_context_;
-  // Context<double>* plant_context_{};
-  // Context<double>* visualizer_context_{};
   VectorXd nominal_q_;
   std::string OCTOMAP_NS = "<octomap>";
 

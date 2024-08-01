@@ -105,6 +105,8 @@ public:
     visual_tools_.publishText(text_pose, "Pipeline Testbench", rvt::WHITE, rvt::XLARGE);
     visual_tools_.trigger();
 
+    // TODO: temporary change to planning scene, adds a box replace once
+    // integration tests are implemented
     geometry_msgs::msg::Pose block_pose;
     block_pose.position.z = 0.5;
     block_pose.position.y = -0.3;

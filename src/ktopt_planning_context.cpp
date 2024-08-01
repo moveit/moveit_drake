@@ -13,9 +13,10 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
-}  // namespace
 
-// const std::string KTOptPlanningContext::OCTOMAP_NS = "<octomap>";
+double COLLISION_CHECK_RESOLUTION = 25.0;
+double LOWER_BOUND = 0.01;
+}  // namespace
 
 
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
@@ -97,7 +98,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // Add constraint on end joint configuration and velocity
   trajopt.AddPathPositionConstraint(toDrakePositions(goal_state, joints), toDrakePositions(goal_state, joints), 1.0);
   trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 1.0);
-  // TODO Add constraints on joint position/velocity/acceleration
+  // TODO: Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
   //     plant_->GetPositionLowerLimits(),
   //     plant_->GetPositionUpperLimits());
@@ -107,9 +108,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Add constraints on duration
   trajopt.AddDurationConstraint(0.5, 5);
-
-  // TODO: Add collision checking distance constraints
-  // TODO: Add position/orientation constraints, if any specified in the motion planning request
 
   // solve the program
   auto result = Solve(prog);
@@ -124,7 +122,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   RCLCPP_INFO(getLogger(), "Setting initial guess ...");
   // set the initial guess
   trajopt.SetInitialGuess(trajopt.ReconstructTrajectory(result));
-  // const auto& collision_constraint = MinimumDistanceLowerBoundConstraint(&plant_, 0.01, &plant_context_);
 
   // add collision constraints
   for (double s = 0.0; s <=25.0; s++)
@@ -132,9 +129,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     trajopt.AddPathPositionConstraint(
       std::make_shared<MinimumDistanceLowerBoundConstraint>(
         &plant_,
-        0.01,
+        LOWER_BOUND,
         &plant_context_),
-      s/25.0);
+      s/COLLISION_CHECK_RESOLUTION);
   }
   
   // collision free trajectory
@@ -186,7 +183,6 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   robot_description_ = robot_description;
 
   // also perform some drake related initialisations here
-  // DiagramBuilder<double> builder;
   builder = std::make_unique<DiagramBuilder<double>>();
 
   // meshcat experiment
@@ -194,8 +190,6 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   meshcat_ = std::make_shared<Meshcat>(meshcat_params);
 
   auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(builder.get(), 0.0);
-  // plant_ = &plant;
-  // scene_graph_ = &scene_graph;
 
   // TODO:(kamiradi) Figure out object parsing
   // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
@@ -270,13 +264,12 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
         // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
 
-        // Creates a box geoemtry and ancors it to the world origin. Better
+        // Creates a box geometry and anchors it to the world origin. Better
         // approach is to create a ground object, anchor that, and then anchor
-        // every non-moving entity to the ground plan
+        // every non-moving entity to the ground plane
         // TODO: Create and anchor ground entity
         Vector3d p(0.3, -0.3, 0.5);
         const SourceId box_source_id = scene_graph.RegisterSource("box1");
-        // const FrameId box_frame_id = scene_graph.RegisterFrame(box_source_id, GeometryFrame("box1_frame"));
         const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
           box_source_id,
           std::make_unique<GeometryInstance>(
@@ -287,17 +280,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
               0.15),
             "box"
           )); //hard coded for now because I know box dimensions and pose, from
-        // pipline testbench
-        // const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-        //   box_source_id, box_frame_id,
-        //   std::make_unique<GeometryInstance>(
-        //     RigidTransformd(p),
-        //     std::make_unique<Box>(
-        //       0.15,
-        //       0.15,
-        //       0.15),
-        //     "box"
-        //   )); //hard coded for now because I know box dimensions and pose, from
 
         // add illustration, proximity, perception properties
         scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
