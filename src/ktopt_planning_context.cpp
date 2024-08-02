@@ -19,6 +19,7 @@ double LOWER_BOUND = 0.01;
 }  // namespace
 
 
+
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
                                            const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
@@ -52,6 +53,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto& req = getMotionPlanRequest();
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
+
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const auto& joints = group->getActiveJointModels();
 
@@ -98,6 +100,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // Add constraint on end joint configuration and velocity
   trajopt.AddPathPositionConstraint(toDrakePositions(goal_state, joints), toDrakePositions(goal_state, joints), 1.0);
   trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 1.0);
+
   // TODO: Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
   //     plant_->GetPositionLowerLimits(),
@@ -224,6 +227,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // diagram
   diagram_ = builder->Build();
   diagram_context_ = diagram_->CreateDefaultContext();
+
   auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
 
   nominal_q_ = plant.GetPositions(plant_context);
@@ -287,6 +291,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
     }
   }
+
 }
 
 VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)

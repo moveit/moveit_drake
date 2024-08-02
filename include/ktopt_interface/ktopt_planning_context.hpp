@@ -27,6 +27,7 @@
 namespace ktopt_interface
 {
 // declare all namespaces to be used
+
 using drake::geometry::Meshcat;
 using drake::geometry::MeshcatParams;
 using drake::geometry::MeshcatVisualizer;
@@ -78,6 +79,7 @@ public:
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
+
 
 private:
   const ktopt_interface::Params params_;
