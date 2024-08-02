@@ -43,7 +43,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
   // dome drake related scope initialisations
-  const auto& plant = 
+  const auto& plant =
     dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
   const auto& scene_graph =
     dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
@@ -136,7 +136,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
         &plant_context),
       s/COLLISION_CHECK_RESOLUTION);
   }
-  
+
   // The previous solution is used to warm-start the collision checked
   // optimization problem
   auto collision_free_result = Solve(prog);
