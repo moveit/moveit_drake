@@ -56,7 +56,7 @@ using ::drake::multibody::Parser;
 using ::drake::systems::DiagramBuilder;
 
 /**
- * @brief
+ * @brief TODO
  *
  * @param robot_trajectory
  * @return drake::trajectories::Trajectory<double>
@@ -68,17 +68,14 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
   std::vector<double> breaks;
   std::vector<Eigen::MatrixXd> samples;
 
-  const auto& waypoints = robot_trajectory.getWayPointDurations();
-  double time = 0.0;
+  // Create samples & breaks
   for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i)
   {
-    time += waypoints[i];
-    breaks.push_back(time);
-
     const auto& state = robot_trajectory.getWayPoint(i);
     Eigen::VectorXd position(state.getVariableCount());
     state.copyJointGroupPositions(group, position);
     samples.emplace_back(position);
+    breaks.emplace_back(robot_trajectory.getWayPointDurationFromStart(i));
   }
 
   // Create a piecewise polynomial trajectory
