@@ -62,7 +62,8 @@ using ::drake::systems::DiagramBuilder;
  * @return drake::trajectories::Trajectory<double>
  */
 [[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
-getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory)
+getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory,
+                       const moveit::core::JointModelGroup* group)
 {
   std::vector<double> breaks;
   std::vector<Eigen::MatrixXd> samples;
@@ -76,10 +77,7 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
 
     const auto& state = robot_trajectory.getWayPoint(i);
     Eigen::VectorXd position(state.getVariableCount());
-    for (std::size_t j = 0; j < state.getVariableCount(); ++j)
-    {
-      position[j] = state.getVariablePosition(j);
-    }
+    state.copyJointGroupPositions(group, position);
     samples.emplace_back(position);
   }
 

@@ -147,10 +147,11 @@ public:
     plant.SetPositionsAndVelocities(&plant_context, q);
 
     // Create drake::trajectories::Trajectory from moveit trajectory
-    auto input_trajectory = getPiecewisePolynomial(*res.trajectory);
+    auto input_trajectory = getPiecewisePolynomial(*res.trajectory, joint_model_group);
     // Run toppra (TODO)
     const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
     auto toppra = Toppra(input_trajectory, plant, grid_points);
+
 
     /////////////////////////////////////////////////////////////////////////
     // Read joint bounds from robot model (TODO(sjahr): Expose in MoveIt2) //
@@ -210,8 +211,6 @@ public:
         return;
       }
     }
-
-    //
     toppra.AddJointVelocityLimit(max_velocity, min_velocity);
     toppra.AddJointAccelerationLimit(min_acceleration, max_acceleration);
     auto optimized_trajectory = toppra.SolvePathParameterization();
