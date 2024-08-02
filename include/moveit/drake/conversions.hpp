@@ -56,36 +56,40 @@ using ::drake::multibody::Parser;
 using ::drake::systems::DiagramBuilder;
 
 /**
- * @brief 
- * 
- * @param robot_trajectory 
- * @return drake::trajectories::Trajectory<double> 
+ * @brief
+ *
+ * @param robot_trajectory
+ * @return drake::trajectories::Trajectory<double>
  */
-[[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double> getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory) {
+[[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
+getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory)
+{
+  std::vector<double> breaks;
+  std::vector<Eigen::MatrixXd> samples;
 
-    std::vector<double> breaks;
-    std::vector<Eigen::MatrixXd> samples;
+  const auto& waypoints = robot_trajectory.getWayPointDurations();
+  double time = 0.0;
+  for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i)
+  {
+    time += waypoints[i];
+    breaks.push_back(time);
 
-    const auto& waypoints = robot_trajectory.getWayPointDurations();
-    double time = 0.0;
-    for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i) {
-        time += waypoints[i];
-        breaks.push_back(time);
-        
-        const auto& state = robot_trajectory.getWayPoint(i);
-        Eigen::VectorXd position(state.getVariableCount());
-        for (std::size_t j = 0; j < state.getVariableCount(); ++j) {
-            position[j] = state.getVariablePosition(j);
-        }
-        samples.emplace_back(position);
+    const auto& state = robot_trajectory.getWayPoint(i);
+    Eigen::VectorXd position(state.getVariableCount());
+    for (std::size_t j = 0; j < state.getVariableCount(); ++j)
+    {
+      position[j] = state.getVariablePosition(j);
     }
+    samples.emplace_back(position);
+  }
 
-    // Create a piecewise polynomial trajectory
-    return ::drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(breaks, samples);
+  // Create a piecewise polynomial trajectory
+  return ::drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(breaks, samples);
 }
 
-void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>& piecewise_polynomial, const int samples, std::shared_ptr<::robot_trajectory::RobotTrajectory>& output_trajectory) {
-
+void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>& piecewise_polynomial,
+                        const int samples, std::shared_ptr<::robot_trajectory::RobotTrajectory>& output_trajectory)
+{
   // Get the start and end times of the piecewise polynomial
   const auto time_step = piecewise_polynomial.end_time() / static_cast<double>(samples - 1);
 

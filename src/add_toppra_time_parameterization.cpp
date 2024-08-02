@@ -53,20 +53,22 @@ namespace moveit::drake
 {
 using ::drake::geometry::SceneGraph;
 using ::drake::multibody::AddMultibodyPlantSceneGraph;
+using ::drake::multibody::CalcGridPointsOptions;
 using ::drake::multibody::MultibodyPlant;
 using ::drake::multibody::PackageMap;
 using ::drake::multibody::Parser;
 using ::drake::multibody::Toppra;
-using ::drake::multibody::CalcGridPointsOptions;
+using ::drake::systems::Context;
 using ::drake::systems::Diagram;
 using ::drake::systems::DiagramBuilder;
 
-namespace {
-  rclcpp::Logger getLogger()
-  {
-    return moveit::getLogger("moveit.drake.toppra");
-  }
+namespace
+{
+rclcpp::Logger getLogger()
+{
+  return moveit::getLogger("moveit.drake.toppra");
 }
+}  // namespace
 /**
  * @brief TODO
  *
@@ -81,21 +83,23 @@ public:
     // TODO
     // param_listener_ = std::make_unique<toppra_parameters::ParamListener>(node, parameter_namespace);
 
-    // Init multi-body plant
-    // TODO(sjahr): Use description topic + move into separate function
-    DiagramBuilder<double> builder;
+    // Construct diagram
+    auto builder = std::make_unique<DiagramBuilder<double>>();
 
-    std::tie(plant_, scene_graph_) = AddMultibodyPlantSceneGraph(&builder, 0.0);
+    auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(builder.get(), 0.0 /* model as continuous system */);
 
-    // HACK: For now loading directly from drake's package map
+    // TODO(sjahr) Replace with subscribed robot description
     const char* ModelUrl = "package://drake_models/franka_description/"
                            "urdf/panda_arm.urdf";
     const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
-    auto robot_instance = Parser(plant_, scene_graph_).AddModels(urdf);
-    plant_->WeldFrames(plant_->world_frame(), plant_->GetFrameByName("panda_link0"));
+    Parser(&plant, &scene_graph).AddModels(urdf);
+    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
 
     // for now finalize plant here
-    plant_->Finalize();
+    plant.Finalize();
+
+    diagram_ = builder->Build();
+    diagram_context_ = diagram_->CreateDefaultContext();
   }
 
   [[nodiscard]] std::string getDescription() const override
@@ -103,106 +107,131 @@ public:
     return std::string("AddToppraTimeParameterization");
   }
 
-  void adapt(const planning_scene::PlanningSceneConstPtr& /*planning_scene*/,
+  void adapt(const planning_scene::PlanningSceneConstPtr& planning_scene,
              const planning_interface::MotionPlanRequest& /* req */,
              planning_interface::MotionPlanResponse& res) const override
   {
     // Check if res contains a path
     if (!res.trajectory)
     {
-      RCLCPP_ERROR(getLogger(), "Cannot apply response adapter '%s' because MotionPlanResponse does not contain a path.",
+      RCLCPP_ERROR(getLogger(),
+                   "Cannot apply response adapter '%s' because MotionPlanResponse does not contain a path.",
                    getDescription().c_str());
       res.error_code = moveit::core::MoveItErrorCode::INVALID_MOTION_PLAN;
+      return;
+    }
+
+    // Get joint model group
+    const moveit::core::JointModelGroup* joint_model_group = res.trajectory->getGroup();
+    if (!joint_model_group)
+    {
+      RCLCPP_ERROR(getLogger(), "It looks like the pipeline did not set the group the plan was computed for");
       res.error_code = moveit::core::MoveItErrorCode::FAILURE;
       return;
     }
+
+    /////////////////////////////////////
+    // Update plan from planning scene //
+    /////////////////////////////////////
+    auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
+    auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
+    const auto& current_state = planning_scene->getCurrentState();
+    Eigen::VectorXd q_pos = Eigen::VectorXd::Zero(joint_model_group->getActiveVariableCount());
+    Eigen::VectorXd q_vel = Eigen::VectorXd::Zero(joint_model_group->getActiveVariableCount());
+    Eigen::VectorXd q = Eigen::VectorXd::Zero(2 * joint_model_group->getActiveVariableCount());
+
+    current_state.copyJointGroupPositions(joint_model_group, q_pos);
+    current_state.copyJointGroupVelocities(joint_model_group, q_vel);
+    q << q_pos;
+    q << q_vel;
+    plant.SetPositionsAndVelocities(&plant_context, q);
 
     // Create drake::trajectories::Trajectory from moveit trajectory
     auto input_trajectory = getPiecewisePolynomial(*res.trajectory);
     // Run toppra (TODO)
     const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
-    auto toppra = Toppra(input_trajectory, *plant_, grid_points);
+    auto toppra = Toppra(input_trajectory, plant, grid_points);
 
-    // Read joint bounds from robot model (TODO(sjahr): Expose in MoveIt2)
-  const moveit::core::JointModelGroup* group = res.trajectory->getGroup();
-  if (!group)
-  {
-    RCLCPP_ERROR(getLogger(), "It looks like the pipeline did not set the group the plan was computed for");
-    return;
-  }
-
-  // Get the velocity and acceleration limits for all active joints
-  const moveit::core::RobotModel& robot_model = group->getParentModel();
-  const std::vector<std::string>& joint_variables = group->getVariableNames();
-  std::vector<size_t> active_joint_indices;
-  if (!group->computeJointVariableIndices(group->getActiveJointModelNames(), active_joint_indices))
-  {
-    RCLCPP_ERROR(getLogger(), "Failed to get active variable indices.");
-  }
-
-  const size_t num_active_joints = active_joint_indices.size();
-  Eigen::VectorXd min_velocity(num_active_joints);
-  Eigen::VectorXd max_velocity(num_active_joints);
-  Eigen::VectorXd min_acceleration(num_active_joints);
-  Eigen::VectorXd max_acceleration(num_active_joints);
-  for (size_t idx = 0; idx < num_active_joints; ++idx)
-  {
-    // For active joints only (skip mimic joints and other types)
-    const moveit::core::VariableBounds& bounds = robot_model.getVariableBounds(joint_variables[active_joint_indices[idx]]);
-
-    // Limits need to be non-zero, otherwise we never exit
-    if (bounds.velocity_bounded_)
+    /////////////////////////////////////////////////////////////////////////
+    // Read joint bounds from robot model (TODO(sjahr): Expose in MoveIt2) //
+    /////////////////////////////////////////////////////////////////////////
+    // Get the velocity and acceleration limits for all active joints
+    const moveit::core::RobotModel& robot_model = joint_model_group->getParentModel();
+    const std::vector<std::string>& joint_variables = joint_model_group->getVariableNames();
+    std::vector<size_t> active_joint_indices;
+    if (!joint_model_group->computeJointVariableIndices(joint_model_group->getActiveJointModelNames(),
+                                                        active_joint_indices))
     {
-      max_velocity[idx] = bounds.max_velocity_; // TODO(sjahr) consider scaling factor
-      min_velocity[idx] = bounds.min_velocity_; // TODO(sjahr) consider scaling factor
-    }
-    else
-    {
-      RCLCPP_ERROR_STREAM(getLogger(), "No velocity limit was defined for joint " << joint_variables.at(idx).c_str()
-                                                                                  << "! You have to define velocity "
-                                                                                     "limits "
-                                                                                     "in the URDF or "
-                                                                                     "joint_limits.yaml");
-      res.error_code = moveit::core::MoveItErrorCode::FAILURE;
-      return;
+      RCLCPP_ERROR(getLogger(), "Failed to get active variable indices.");
     }
 
-    if (bounds.acceleration_bounded_)
+    const size_t num_active_joints = active_joint_indices.size();
+    Eigen::VectorXd min_velocity(num_active_joints);
+    Eigen::VectorXd max_velocity(num_active_joints);
+    Eigen::VectorXd min_acceleration(num_active_joints);
+    Eigen::VectorXd max_acceleration(num_active_joints);
+    for (size_t idx = 0; idx < num_active_joints; ++idx)
     {
-      min_acceleration[idx] = bounds.min_acceleration_;  // TODO(sjahr) consider scaling factor
-      max_acceleration[idx] = bounds.max_acceleration_;  // TODO(sjahr) consider scaling factor
-    }
-    else
-    {
-      RCLCPP_ERROR_STREAM(getLogger(), "No acceleration limit was defined for joint " << joint_variables.at(idx).c_str()
-                                                                                      << "! You have to define "
-                                                                                         "acceleration "
-                                                                                         "limits in the URDF or "
-                                                                                         "joint_limits.yaml");
-      res.error_code = moveit::core::MoveItErrorCode::FAILURE;
-      return;
-    }
-  }    
+      // For active joints only (skip mimic joints and other types)
+      const moveit::core::VariableBounds& bounds =
+          robot_model.getVariableBounds(joint_variables[active_joint_indices[idx]]);
 
+      // Limits need to be non-zero, otherwise we never exit
+      if (bounds.velocity_bounded_)
+      {
+        max_velocity[idx] = bounds.max_velocity_;  // TODO(sjahr) consider scaling factor
+        min_velocity[idx] = bounds.min_velocity_;  // TODO(sjahr) consider scaling factor
+      }
+      else
+      {
+        RCLCPP_ERROR_STREAM(getLogger(), "No velocity limit was defined for joint " << joint_variables.at(idx).c_str()
+                                                                                    << "! You have to define velocity "
+                                                                                       "limits "
+                                                                                       "in the URDF or "
+                                                                                       "joint_limits.yaml");
+        res.error_code = moveit::core::MoveItErrorCode::FAILURE;
+        return;
+      }
 
+      if (bounds.acceleration_bounded_)
+      {
+        min_acceleration[idx] = bounds.min_acceleration_;  // TODO(sjahr) consider scaling factor
+        max_acceleration[idx] = bounds.max_acceleration_;  // TODO(sjahr) consider scaling factor
+      }
+      else
+      {
+        RCLCPP_ERROR_STREAM(getLogger(), "No acceleration limit was defined for joint "
+                                             << joint_variables.at(idx).c_str()
+                                             << "! You have to define "
+                                                "acceleration "
+                                                "limits in the URDF or "
+                                                "joint_limits.yaml");
+        res.error_code = moveit::core::MoveItErrorCode::FAILURE;
+        return;
+      }
+    }
+
+    //
     toppra.AddJointVelocityLimit(max_velocity, min_velocity);
     toppra.AddJointAccelerationLimit(min_acceleration, max_acceleration);
     auto optimized_trajectory = toppra.SolvePathParameterization();
 
-    if(!optimized_trajectory.has_value()){
+    if (!optimized_trajectory.has_value())
+    {
       RCLCPP_ERROR_STREAM(getLogger(), "Failed to calculate a trajectory with toppra");
       res.error_code = moveit::core::MoveItErrorCode::FAILURE;
       return;
     }
 
-    getRobotTrajectory(optimized_trajectory.value(), res.trajectory->getWayPointCount() /* TODO enable down sampling */, res.trajectory /* override previous solution with optimal trajectory*/);
+    getRobotTrajectory(optimized_trajectory.value(), res.trajectory->getWayPointCount() /* TODO enable down sampling */,
+                       res.trajectory /* override previous solution with optimal trajectory*/);
     res.error_code = moveit::core::MoveItErrorCode::SUCCESS;
   }
 
 protected:
   // std::unique_ptr<default_response_adapter_parameters::ParamListener> param_listener_;
-  MultibodyPlant<double>* plant_{};
-  SceneGraph<double>* scene_graph_{};
+  std::unique_ptr<Diagram<double>> diagram_;
+  std::unique_ptr<Context<double>> diagram_context_;
 };
 
 }  // namespace moveit::drake
