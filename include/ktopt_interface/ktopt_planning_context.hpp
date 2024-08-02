@@ -88,7 +88,7 @@ private:
   std::unique_ptr<DiagramBuilder<double>> builder;
   std::unique_ptr<Context<double>> diagram_context_;
   VectorXd nominal_q_;
-  std::string OCTOMAP_NS = "<octomap>";
+  const std::string OCTOMAP_NS = "<octomap>";
 
   // visualization
   std::shared_ptr<Meshcat> meshcat_;

@@ -42,9 +42,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
   // dome drake related scope initialisations
-  const auto& plant_ = 
+  const auto& plant = 
     dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
-  const auto& scene_graph_ =
+  const auto& scene_graph =
     dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
 
 
@@ -63,8 +63,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   q << q_v;
 
   // drake accepts a VectorX<T>
-  auto& plant_context_ = diagram_->GetMutableSubsystemContext(plant_, diagram_context_.get());
-  plant_.SetPositionsAndVelocities(&plant_context_, q);
+  auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
+  plant.SetPositionsAndVelocities(&plant_context, q);
 
   // retrieve goal state
   moveit::core::RobotState goal_state(start_state);
@@ -77,7 +77,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(plant_.num_positions(), params_.control_points);
+  auto trajopt = KinematicTrajectoryOptimization(plant.num_positions(), params_.control_points);
   auto& prog = trajopt.get_mutable_prog();
 
   // Costs
@@ -128,13 +128,14 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   {
     trajopt.AddPathPositionConstraint(
       std::make_shared<MinimumDistanceLowerBoundConstraint>(
-        &plant_,
+        &plant,
         LOWER_BOUND,
-        &plant_context_),
+        &plant_context),
       s/COLLISION_CHECK_RESOLUTION);
   }
   
-  // collision free trajectory
+  // The previous solution is used to warm-start the collision checked
+  // optimization problem
   auto collision_free_result = Solve(prog);
 
   // package up the resulting trajectory
@@ -159,7 +160,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     setJointVelocities(vel_val, active_joints, *waypoint);
     res.trajectory->addSuffixWayPoint(waypoint, time_step);
 
-    plant_.SetPositions(&plant_context_, pos_val);
+    plant.SetPositions(&plant_context, pos_val);
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
 
@@ -233,14 +234,13 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
-  RCLCPP_INFO(getLogger(), "trying something ...");
   try
   {
     auto world = planning_scene.getWorld();
   }
   catch (const std::exception& e)
   {
-    RCLCPP_ERROR_STREAM(getLogger(), "caought exception ... " << e.what());
+    RCLCPP_ERROR_STREAM(getLogger(), "caught exception ... " << e.what());
   }
   auto& plant =
     dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
@@ -251,41 +251,40 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
     if (!collision_object)
     {
-      RCLCPP_ERROR(getLogger(), "No collision object");
+      RCLCPP_INFO(getLogger(), "No collision object");
       return;
     }
-    if (object != OCTOMAP_NS)
+    if (object == OCTOMAP_NS)
     {
       RCLCPP_ERROR(getLogger(), "skipping octomap for now ...");
-      for (const auto& shape : collision_object->shapes_)
-      {
-        RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
-        const auto& pose = collision_object->shape_poses_[0];
-        // # drake::geometry::Box box(shape->dimensions_[0], shape->dimenstions_[1], shape->dimensions_[2]);
-        // # const SourceId box1_source_id = scene_graph.RegisterSource("box1");
+      continue;
+    }
+    for (const auto& shape : collision_object->shapes_)
+    {
+      RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
+      const auto& pose = collision_object->shape_poses_[0];
 
-        // Creates a box geometry and anchors it to the world origin. Better
-        // approach is to create a ground object, anchor that, and then anchor
-        // every non-moving entity to the ground plane
-        // TODO: Create and anchor ground entity
-        Vector3d p(0.3, -0.3, 0.5);
-        const SourceId box_source_id = scene_graph.RegisterSource("box1");
-        const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-          box_source_id,
-          std::make_unique<GeometryInstance>(
-            RigidTransformd(p),
-            std::make_unique<Box>(
-              0.15,
-              0.15,
-              0.15),
-            "box"
-          )); //hard coded for now because I know box dimensions and pose, from
+      // Creates a box geometry and anchors it to the world origin. Better
+      // approach is to create a ground object, anchor that, and then anchor
+      // every non-moving entity to the ground plane
+      // TODO: Create and anchor ground entity
+      Vector3d p(0.3, -0.3, 0.5);
+      const SourceId box_source_id = scene_graph.RegisterSource("box1");
+      const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+        box_source_id,
+        std::make_unique<GeometryInstance>(
+          RigidTransformd(p),
+          std::make_unique<Box>(
+            0.15,
+            0.15,
+            0.15),
+          "box"
+        )); //hard coded for now because I know box dimensions and pose, from
 
-        // add illustration, proximity, perception properties
-        scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-        scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-        scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
-      }
+      // add illustration, proximity, perception properties
+      scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+      scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+      scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
     }
   }
 }
