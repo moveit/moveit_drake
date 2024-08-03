@@ -28,28 +28,28 @@ namespace ktopt_interface
 {
 // declare all namespaces to be used
 
+using drake::geometry::AddRigidHydroelasticProperties;
+using drake::geometry::Box;
+using drake::geometry::FrameId;
+using drake::geometry::GeometryFrame;
+using drake::geometry::GeometryId;
+using drake::geometry::GeometryInstance;
+using drake::geometry::IllustrationProperties;
 using drake::geometry::Meshcat;
 using drake::geometry::MeshcatParams;
 using drake::geometry::MeshcatVisualizer;
 using drake::geometry::MeshcatVisualizerParams;
-using drake::geometry::SceneGraph;
-using drake::geometry::FrameId;
-using drake::geometry::SourceId;
-using drake::geometry::GeometryId;
-using drake::geometry::GeometryInstance;
-using drake::geometry::GeometryFrame;
-using drake::geometry::AddRigidHydroelasticProperties;
-using drake::geometry::IllustrationProperties;
-using drake::geometry::ProximityProperties;
 using drake::geometry::PerceptionProperties;
+using drake::geometry::ProximityProperties;
 using drake::geometry::Role;
-using drake::geometry::Box;
+using drake::geometry::SceneGraph;
+using drake::geometry::SourceId;
+using drake::math::RigidTransformd;
 using drake::multibody::AddMultibodyPlantSceneGraph;
+using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
 using drake::multibody::Parser;
-using drake::multibody::MultibodyPlant;
-using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Context;
@@ -57,10 +57,9 @@ using drake::systems::Diagram;
 using drake::systems::DiagramBuilder;
 using drake::visualization::ApplyVisualizationConfig;
 using drake::visualization::VisualizationConfig;
-using drake::math::RigidTransformd;
 using Eigen::MatrixXd;
-using Eigen::VectorXd;
 using Eigen::Vector3d;
+using Eigen::VectorXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
 
 class KTOptPlanningContext : public planning_interface::PlanningContext
@@ -79,7 +78,6 @@ public:
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
-
 
 private:
   const ktopt_interface::Params params_;

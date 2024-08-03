@@ -35,9 +35,10 @@ RUN apt update && \
         ros-${ROS_DISTRO}-desktop \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
         ros-dev-tools \
-        wget
+        wget \
+        clang-format-14
 
-RUN pip3 install colcon-mixin && \
+RUN pip3 install colcon-mixin pre-commit && \
     colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
     colcon mixin update default
 

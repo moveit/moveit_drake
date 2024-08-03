@@ -18,8 +18,6 @@ double COLLISION_CHECK_RESOLUTION = 25.0;
 double LOWER_BOUND = 0.01;
 }  // namespace
 
-
-
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
                                            const ktopt_interface::Params& params)
   : planning_interface::PlanningContext(name, group_name), params_(params)
@@ -43,11 +41,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
   // dome drake related scope initialisations
-  const auto& plant =
-    dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
-  const auto& scene_graph =
-    dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
-
+  const auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
+  const auto& scene_graph = dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
@@ -127,14 +122,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.SetInitialGuess(trajopt.ReconstructTrajectory(result));
 
   // add collision constraints
-  for (double s = 0.0; s <=25.0; s++)
+  for (double s = 0.0; s <= 25.0; s++)
   {
-    trajopt.AddPathPositionConstraint(
-      std::make_shared<MinimumDistanceLowerBoundConstraint>(
-        &plant,
-        LOWER_BOUND,
-        &plant_context),
-      s/COLLISION_CHECK_RESOLUTION);
+    trajopt.AddPathPositionConstraint(std::make_shared<MinimumDistanceLowerBoundConstraint>(&plant, LOWER_BOUND,
+                                                                                            &plant_context),
+                                      s / COLLISION_CHECK_RESOLUTION);
   }
 
   // The previous solution is used to warm-start the collision checked
@@ -209,7 +201,6 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   const auto scene = getPlanningScene();
   transcribePlanningScene(*scene);
 
-
   // for now finalize plant here
   plant.Finalize();
 
@@ -219,8 +210,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   MeshcatVisualizerParams meshcat_viz_params;
   auto& visualizer =
-      MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_,
-                                              std::move(meshcat_viz_params));
+      MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_, std::move(meshcat_viz_params));
   visualizer_ = &visualizer;
 
   // in the future you can add other LeafSystems here. For now building the
@@ -246,10 +236,8 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   {
     RCLCPP_ERROR_STREAM(getLogger(), "caught exception ... " << e.what());
   }
-  auto& plant =
-    dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
-  auto& scene_graph =
-    dynamic_cast<SceneGraph<double>&>(builder->GetMutableSubsystemByName("scene_graph"));
+  auto& plant = dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
+  auto& scene_graph = dynamic_cast<SceneGraph<double>&>(builder->GetMutableSubsystemByName("scene_graph"));
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
@@ -275,15 +263,9 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       Vector3d p(0.3, -0.3, 0.5);
       const SourceId box_source_id = scene_graph.RegisterSource("box1");
       const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-        box_source_id,
-        std::make_unique<GeometryInstance>(
-          RigidTransformd(p),
-          std::make_unique<Box>(
-            0.15,
-            0.15,
-            0.15),
-          "box"
-        )); //hard coded for now because I know box dimensions and pose, from
+          box_source_id, std::make_unique<GeometryInstance>(
+                             RigidTransformd(p), std::make_unique<Box>(0.15, 0.15, 0.15),
+                             "box"));  // hard coded for now because I know box dimensions and pose, from
 
       // add illustration, proximity, perception properties
       scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
@@ -291,7 +273,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
     }
   }
-
 }
 
 VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)
