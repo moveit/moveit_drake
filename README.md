@@ -16,8 +16,8 @@ moveit)
     cd moveit_drake
     docker compose build
 
-This should give you an image with `drake` and `moveit2`. Next, create a
-container with the following and create shell access.
+This should give you an image with `drake` and `moveit2`.
+Next, create a container with the following and create shell access.
 
     docker compose up
     docker compose exec -it moveit_drake bash

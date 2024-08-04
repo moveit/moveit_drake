@@ -16,8 +16,8 @@ ktopt_interface:
     }
   }
   trajectory_time_step: {
-    type: float,
-    description: "Timestep resolution where the KTOpt trajectory is evaluated and reported.",
+    type: double,
+    description: "Timestep resolution, in seconds, where the KTOpt trajectory is evaluated and reported.",
     default_value: 0.01,
     validation: {
       gt<>: [0.0]
@@ -33,7 +33,7 @@ ktopt_interface:
   }
   collision_check_lower_distance_bound: {
     type: double,
-    description: "Lower bound, in meters, for collision check minimum distance constraint.",
+    description: "Lower bound, in meters, for the collision check minimum distance constraint.",
     default_value: 0.01,
     validation: {
       gt_eq<>: [0.0]

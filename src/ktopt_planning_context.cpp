@@ -128,8 +128,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
                                       static_cast<double>(s) / (params_.num_collision_check_points - 1));
   }
 
-  // The previous solution is used to warm-start the collision checked
-  // optimization problem
+  // The previous solution is used to warm-start the collision checked optimization problem
   auto collision_free_result = Solve(prog);
 
   // package up the resulting trajectory
@@ -143,6 +142,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   assert(traj.rows() == active_joints.size());
 
   visualizer_->StartRecording();
+  double t_prev = 0.0;
   const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
   for (int i = 0; i < num_pts; ++i)
   {
@@ -153,7 +153,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
     setJointPositions(pos_val, active_joints, *waypoint);
     setJointVelocities(vel_val, active_joints, *waypoint);
-    res.trajectory->addSuffixWayPoint(waypoint, time_step);
+    res.trajectory->addSuffixWayPoint(waypoint, t - t_prev);
+    t_prev = t;
 
     plant.SetPositions(&plant_context, pos_val);
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
