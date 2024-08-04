@@ -7,7 +7,7 @@ ktopt_interface:
       gt_eq<>: [1]
     }
   }
-  control_points: {
+  num_control_points: {
     type: int,
     description: "Number of control points used to represent the B-Spline.",
     default_value: 10,
@@ -15,15 +15,15 @@ ktopt_interface:
       gt_eq<>: [1]
     }
   }
-  trajectory_res: {
-    type: int,
+  trajectory_time_step: {
+    type: float,
     description: "Timestep resolution where the KTOpt trajectory is evaluated and reported.",
-    default_value: 101,
+    default_value: 0.01,
     validation: {
-      gt_eq<>: [2]
+      gt<>: [0.0]
     }
   }
-  collision_check_resolution: {
+  num_collision_check_points: {
     type: int,
     description: "Number of collision checks to perform along the trajectory.",
     default_value: 25,

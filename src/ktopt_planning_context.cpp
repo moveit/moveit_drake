@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
@@ -71,7 +73,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
 
   // compile into a Kinematic Trajectory Optimization problem
-  auto trajopt = KinematicTrajectoryOptimization(plant.num_positions(), params_.control_points);
+  auto trajopt = KinematicTrajectoryOptimization(plant.num_positions(), params_.num_control_points);
   auto& prog = trajopt.get_mutable_prog();
 
   // Costs
@@ -119,11 +121,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.SetInitialGuess(trajopt.ReconstructTrajectory(result));
 
   // add collision constraints
-  for (int s = 0; s <= params._collision_check_resolution; ++s)
+  for (int s = 0; s < params_.num_collision_check_points; ++s)
   {
     trajopt.AddPathPositionConstraint(std::make_shared<MinimumDistanceLowerBoundConstraint>(
                                           &plant, params_.collision_check_lower_distance_bound, &plant_context),
-                                      static_cast<double>(s) / params._collision_check_resolution);
+                                      static_cast<double>(s) / (params_.num_collision_check_points - 1));
   }
 
   // The previous solution is used to warm-start the collision checked
@@ -132,8 +134,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // package up the resulting trajectory
   auto traj = trajopt.ReconstructTrajectory(collision_free_result);
-  const size_t num_pts = params_.trajectory_res;  // TODO(#28): should be sample time based instead
-  const auto time_step = traj.end_time() / static_cast<double>(num_pts - 1);
   res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), group);
   res.trajectory->clear();
   const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() :
@@ -143,8 +143,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   assert(traj.rows() == active_joints.size());
 
   visualizer_->StartRecording();
-  for (double t = 0.0; t <= traj.end_time(); t += time_step)
+  const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
+  for (int i = 0; i < num_pts; ++i)
   {
+    const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+    const auto t = std::min(t_scale, 1.0) * traj.end_time();
     const auto pos_val = traj.value(t);
     const auto vel_val = traj.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
@@ -157,7 +160,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     visualizer_->ForcedPublish(vis_context);
 
     // Without these sleeps, the visualizer won't give you time to load your browser
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 1000.0)));
   }
   visualizer_->StopRecording();
   visualizer_->PublishRecording();
