@@ -1,7 +1,7 @@
 ktopt_interface:
   num_iterations: {
     type: int,
-    description: "dummy",
+    description: "Number of iterations for the Drake mathematical program solver.",
     default_value: 1000,
     validation: {
       gt_eq<>: [1]
@@ -9,11 +9,11 @@ ktopt_interface:
   }
   control_points: {
     type: int,
-    description: "Number of control points used to represent the B-Spline",
+    description: "Number of control points used to represent the B-Spline.",
     default_value: 10
   }
   trajectory_res: {
     type: int,
-    description: "Timestep resolution where the KTOpt trajectory is evaluated and reported",
+    description: "Timestep resolution where the KTOpt trajectory is evaluated and reported.",
     default_value: 101
   }

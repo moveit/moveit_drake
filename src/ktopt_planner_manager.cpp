@@ -9,8 +9,6 @@
 #include <std_msgs/msg/string.hpp>
 #include <ktopt_interface/ktopt_planning_context.hpp>
 
-// just so that this builds
-
 namespace ktopt_interface
 {
 using std::placeholders::_1;
