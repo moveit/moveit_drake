@@ -13,9 +13,6 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
-
-double COLLISION_CHECK_RESOLUTION = 25.0;
-double LOWER_BOUND = 0.01;
 }  // namespace
 
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
@@ -122,11 +119,11 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.SetInitialGuess(trajopt.ReconstructTrajectory(result));
 
   // add collision constraints
-  for (double s = 0.0; s <= COLLISION_CHECK_RESOLUTION; s++)
+  for (int s = 0; s <= params._collision_check_resolution; ++s)
   {
-    trajopt.AddPathPositionConstraint(std::make_shared<MinimumDistanceLowerBoundConstraint>(&plant, LOWER_BOUND,
-                                                                                            &plant_context),
-                                      s / COLLISION_CHECK_RESOLUTION);
+    trajopt.AddPathPositionConstraint(std::make_shared<MinimumDistanceLowerBoundConstraint>(
+                                          &plant, params_.collision_check_lower_distance_bound, &plant_context),
+                                      static_cast<double>(s) / params._collision_check_resolution);
   }
 
   // The previous solution is used to warm-start the collision checked
