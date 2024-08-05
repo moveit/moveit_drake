@@ -93,8 +93,8 @@ public:
     std::shared_ptr<KTOptPlanningContext> planning_context =
         std::make_shared<KTOptPlanningContext>("KTOPT", req.group_name, params);
     // set robot description
-    planning_context->setRobotDescription(robot_description_);
     planning_context->setPlanningScene(planning_scene);
+    planning_context->setRobotDescription(robot_description_);
     planning_context->setMotionPlanRequest(req);
 
     return planning_context;
