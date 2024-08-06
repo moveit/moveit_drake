@@ -152,7 +152,6 @@ public:
     const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
     auto toppra = Toppra(input_trajectory, plant, grid_points);
 
-
     /////////////////////////////////////////////////////////////////////////
     // Read joint bounds from robot model (TODO(sjahr): Expose in MoveIt2) //
     /////////////////////////////////////////////////////////////////////////
