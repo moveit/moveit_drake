@@ -8,7 +8,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
-      - TERM=xterm-256-color
+      - TERM=xterm-256color
     volumes:
       - /tmp/.X11-unix:/tml/.X11-unix:rw
       - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority

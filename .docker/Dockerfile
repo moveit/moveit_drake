@@ -1,5 +1,5 @@
 FROM robotlocomotion/drake:1.29.0
-MAINTAINER Aditya Kamireddypalli "kamireddypalliaditya@gmail.com"
+LABEL maintainer="Aditya Kamireddypalli kamireddypalliaditya@gmail.com"
 
 ENV ROS_DISTRO=humble
 ENV WORKSPACE=/root/workspace/
@@ -25,18 +25,18 @@ RUN apt update && \
     apt upgrade -y && \
     apt install -y \
         build-essential \
+        clang-format-14 \
         cmake \
         git-lfs \
+        python3-colcon-common-extensions \
         python3-flake8 \
         python3-rosdep \
         python3-setuptools \
         python3-vcstool \
-        python3-colcon-common-extensions \
+        ros-dev-tools \
         ros-${ROS_DISTRO}-desktop \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-        ros-dev-tools \
-        wget \
-        clang-format-14
+        wget
 
 RUN pip3 install colcon-mixin pre-commit && \
     colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
