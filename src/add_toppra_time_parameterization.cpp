@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Author: Sebastian Jahr
-   Description: TODO
+   Description: Add time parameterization with Drake's TOPPRA implementation.
 */
 
 #include <moveit/drake/conversions.hpp>
@@ -70,7 +70,7 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 /**
- * @brief Post-processing adapter that timeparatermizes a trajectory based on reachability analysis. For details see
+ * @brief Post-processing adapter that timeparametermizes a trajectory based on reachability analysis. For details see
  * https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html
  *
  */
