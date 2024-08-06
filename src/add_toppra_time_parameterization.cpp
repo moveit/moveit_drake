@@ -41,11 +41,11 @@
 #include <class_loader/class_loader.hpp>
 #include <moveit/utils/logger.hpp>
 
-#include "drake/multibody/parsing/parser.h"
-#include "drake/geometry/scene_graph.h"
-#include "drake/systems/framework/diagram.h"
-#include "drake/systems/framework/diagram_builder.h"
-#include "drake/multibody/plant/multibody_plant.h"
+#include <drake/multibody/parsing/parser.h>
+#include <drake/geometry/scene_graph.h>
+#include <drake/systems/framework/diagram.h>
+#include <drake/systems/framework/diagram_builder.h>
+#include <drake/multibody/plant/multibody_plant.h>
 #include <drake/multibody/optimization/toppra.h>
 // #include <toppra_parameters.hpp>
 

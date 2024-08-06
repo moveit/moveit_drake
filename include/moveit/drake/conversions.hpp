@@ -39,11 +39,11 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 
-#include "drake/multibody/parsing/parser.h"
-#include "drake/geometry/scene_graph.h"
-#include "drake/systems/framework/diagram.h"
-#include "drake/systems/framework/diagram_builder.h"
-#include "drake/multibody/plant/multibody_plant.h"
+#include <drake/multibody/parsing/parser.h>
+#include <drake/geometry/scene_graph.h>
+#include <drake/systems/framework/diagram.h>
+#include <drake/systems/framework/diagram_builder.h>
+#include <drake/multibody/plant/multibody_plant.h>
 #include <drake/common/trajectories/trajectory.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
 namespace moveit::drake
@@ -68,7 +68,9 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
                        const moveit::core::JointModelGroup* group)
 {
   std::vector<double> breaks;
+  breaks.reserve(robot_trajectory.getWayPointCount());
   std::vector<Eigen::MatrixXd> samples;
+  samples.reserve(robot_trajectory.getWayPointCount());
 
   // Create samples & breaks
   for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i)
@@ -89,17 +91,20 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
  * joint trajectory for every active joint of the given trajectory.
  *
  * @param piecewise_polynomial Drake trajectory
- * @param samples Number of timepoints at which a waypoint is created
+ * @param delta_t Time step size
  * @param output_trajectory MoveIt trajectory to be populated based on the piecewise polynomial
  */
 void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>& piecewise_polynomial,
-                        const int samples, std::shared_ptr<::robot_trajectory::RobotTrajectory>& output_trajectory)
+                        const double delta_t, std::shared_ptr<::robot_trajectory::RobotTrajectory>& output_trajectory)
 {
   // Get the start and end times of the piecewise polynomial
-  const auto time_step = piecewise_polynomial.end_time() / static_cast<double>(samples - 1);
+  double t_prev = 0.0;
+  const auto num_pts = static_cast<size_t>(std::ceil(piecewise_polynomial.end_time() / delta_t) + 1);
 
-  for (double t = 0.0; t <= piecewise_polynomial.end_time(); t += time_step)
+  for (unsigned int i = 0; i < num_pts; ++i)
   {
+    const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+    const auto t = std::min(t_scale, 1.0) * piecewise_polynomial.end_time();
     const auto pos_val = piecewise_polynomial.value(t);
     const auto vel_val = piecewise_polynomial.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(output_trajectory->getRobotModel());
@@ -110,7 +115,8 @@ void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>
       waypoint->setJointVelocities(active_joints[joint_index], &vel_val(joint_index));
     }
 
-    output_trajectory->addSuffixWayPoint(waypoint, time_step);
+    output_trajectory->addSuffixWayPoint(waypoint, t - t_prev);
+    t_prev = t;
   }
 }
 }  // namespace moveit::drake
