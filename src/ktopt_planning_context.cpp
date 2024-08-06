@@ -229,6 +229,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
+  // NOTE: Information tree, to be deleted after implementation
+  // Planning scene -> World (getWorld, WorldConstPtr)
+  // objectIds -> World.getObjectIds()
+  // Object -> World.getObject(objectIds)
+  // 
   try
   {
     auto world = planning_scene.getWorld();
@@ -256,16 +261,31 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     {
       RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
       const auto& pose = collision_object->shape_poses_[0];
+      const auto& shape_type = collision_object->shapes_[0]->type;
+
+      switch (shape_type){
+        case shapes::ShapeType::BOX:
+          const SourceId box_source_id = scene_graph.RegisterSource("box1");
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+            box_source_id,
+            std::make_unique<GeometryInstance>(RigidTransformd(pose),
+                                               std::make_unique<Box>(0.15, 0.15, 0.15),
+                                               "box"));
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+      }
 
       // Creates a box geometry and anchors it to the world origin. Better
       // approach is to create a ground object, anchor that, and then anchor
       // every non-moving entity to the ground plane
       // TODO: Create and anchor ground entity
-      Vector3d p(0.3, -0.3, 0.5);
+      // Vector3d p(0.3, -0.3, 0.5);
       const SourceId box_source_id = scene_graph.RegisterSource("box1");
       const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
           box_source_id, std::make_unique<GeometryInstance>(
-                             RigidTransformd(p), std::make_unique<Box>(0.15, 0.15, 0.15),
+                             RigidTransformd(pose), std::make_unique<Box>(0.15, 0.15, 0.15),
                              "box"));  // hard coded for now because I know box dimensions and pose, from
 
       // add illustration, proximity, perception properties
