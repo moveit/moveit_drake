@@ -1,5 +1,5 @@
 <library  path="moveit_drake">
-  <!-- KTOP adapter -->
+  <!-- KTOPT adapter -->
   <class name="ktopt_interface/KTOptPlanner"
          type="ktopt_interface::KTOptPlannerManager"
          base_class_type="planning_interface::PlannerManager">
