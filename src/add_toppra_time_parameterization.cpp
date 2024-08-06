@@ -70,7 +70,8 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 /**
- * @brief TODO
+ * @brief Post-processing adapter that timeparatermizes a trajectory based on reachability analysis. For details see
+ * https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html
  *
  */
 class AddToppraTimeParameterization : public planning_interface::PlanningResponseAdapter
@@ -148,7 +149,7 @@ public:
 
     // Create drake::trajectories::Trajectory from moveit trajectory
     auto input_trajectory = getPiecewisePolynomial(*res.trajectory, joint_model_group);
-    // Run toppra (TODO)
+    // Run toppra
     const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
     auto toppra = Toppra(input_trajectory, plant, grid_points);
 

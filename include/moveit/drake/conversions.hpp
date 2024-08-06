@@ -56,10 +56,12 @@ using ::drake::multibody::Parser;
 using ::drake::systems::DiagramBuilder;
 
 /**
- * @brief TODO
+ * @brief Create a Piecewise Polynomial from a moveit trajectory (see
+ * https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html)
  *
- * @param robot_trajectory
- * @return drake::trajectories::Trajectory<double>
+ * @param robot_trajectory MoveIt trajectory to be translated
+ * @param group Joint group for which a piecewise polynomial is created
+ * @return ::drake::trajectories::PiecewisePolynomial<double>
  */
 [[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
 getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory,
@@ -82,6 +84,14 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
   return ::drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(breaks, samples);
 }
 
+/**
+ * @brief Create a moveit trajectory from a piecewise polynomial. Assumes that the piecewise polynomial describes a
+ * joint trajectory for every active joint of the given trajectory.
+ *
+ * @param piecewise_polynomial Drake trajectory
+ * @param samples Number of timepoints at which a waypoint is created
+ * @param output_trajectory MoveIt trajectory to be populated based on the piecewise polynomial
+ */
 void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>& piecewise_polynomial,
                         const int samples, std::shared_ptr<::robot_trajectory::RobotTrajectory>& output_trajectory)
 {
@@ -103,22 +113,4 @@ void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>
     output_trajectory->addSuffixWayPoint(waypoint, time_step);
   }
 }
-
-// TODO consider creating a struct
-//::drake::multibody::MultibodyPlant<double> getMultiBodyPlant(
-//    const ::planning_scene::PlanningScene& planning_scene, const std::string& urdf) {
-//
-//    SceneGraph<double>* scene_graph{};
-//    MultibodyPlant<double>* plant{};
-//    DiagramBuilder<double> builder;
-//    std::tie(plant, scene_graph) = AddMultibodyPlantSceneGraph(&builder, 0.0);
-//
-//    auto robot_instance = Parser(plant, scene_graph).AddModels(urdf);
-//    plant->WeldFrames(plant->world_frame(), plant->GetFrameByName("panda_link0"));
-//
-//
-//    plant->Finalize();
-//
-//    return *plant;
-//}
 }  // namespace moveit::drake
