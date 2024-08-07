@@ -47,7 +47,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto& req = getMotionPlanRequest();
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
-
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const auto& joints = group->getActiveJointModels();
 

@@ -1,0 +1,16 @@
+<library  path="moveit_drake">
+  <!-- KTOPT adapter -->
+  <class name="ktopt_interface/KTOptPlanner"
+         type="ktopt_interface::KTOptPlannerManager"
+         base_class_type="planning_interface::PlannerManager">
+    <description>
+      A Drake Kinematic Trajectory Optimization plugin
+    </description>
+  </class>
+  <!-- TOPPRA adapter -->
+  <class name="moveit/drake/AddToppraTimeParameterization" type="moveit::drake::AddToppraTimeParameterization" base_class_type="planning_interface::PlanningResponseAdapter">
+    <description>
+      Given a path, add time parameterization with TOPRRA.
+    </description>
+  </class>
+</library>

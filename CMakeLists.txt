@@ -40,32 +40,33 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 include_directories(include)
 
 # ktopt planning plugin
-add_library(moveit_ktopt_planner_plugin SHARED src/ktopt_planner_manager.cpp
-                                               src/ktopt_planning_context.cpp)
+add_library(
+  moveit_drake SHARED
+  # KTOPT
+  src/ktopt_planner_manager.cpp src/ktopt_planning_context.cpp
+  # TOPPRA
+  src/add_toppra_time_parameterization.cpp)
 
-ament_target_dependencies(moveit_ktopt_planner_plugin rclcpp pluginlib
-                          moveit_core moveit_msgs EIGEN3)
-target_link_libraries(moveit_ktopt_planner_plugin drake::drake
-                      ktopt_moveit_parameters)
+ament_target_dependencies(moveit_drake rclcpp pluginlib moveit_core moveit_msgs
+                          EIGEN3)
+target_link_libraries(moveit_drake drake::drake ktopt_moveit_parameters)
 
 # Ensure that the plugin finds libdrake.so at runtime
-set_target_properties(
-  moveit_ktopt_planner_plugin PROPERTIES INSTALL_RPATH "/opt/drake/lib"
-                                         BUILD_RPATH "/opt/drake/lib")
+set_target_properties(moveit_drake PROPERTIES INSTALL_RPATH "/opt/drake/lib"
+                                              BUILD_RPATH "/opt/drake/lib")
 
-pluginlib_export_plugin_description_file(moveit_core
-                                         ktopt_interface_plugin_description.xml)
+pluginlib_export_plugin_description_file(moveit_core plugin_descriptions.xml)
 
 install(
-  TARGETS moveit_ktopt_planner_plugin ktopt_moveit_parameters
-  EXPORT moveit_ktopt_planner_pluginTargets
+  TARGETS moveit_drake ktopt_moveit_parameters
+  EXPORT moveit_drakeTargets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES
-  DESTINATION include/ktopt_interface)
+  DESTINATION include/drake)
 
-ament_export_targets(moveit_ktopt_planner_pluginTargets HAS_LIBRARY_TARGET)
+ament_export_targets(moveit_drakeTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(moveit_core drake::drake generate_parameter_library)
 
 add_subdirectory(demo)
