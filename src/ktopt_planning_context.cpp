@@ -228,6 +228,11 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
+  // NOTE: Information tree, to be deleted after implementation
+  // Planning scene -> World (getWorld, WorldConstPtr)
+  // objectIds -> World.getObjectIds()
+  // Object -> World.getObject(objectIds)
+  // 
   try
   {
     auto world = planning_scene.getWorld();
@@ -248,29 +253,84 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     }
     if (object == OCTOMAP_NS)
     {
-      RCLCPP_ERROR(getLogger(), "skipping octomap for now ...");
+      RCLCPP_INFO(getLogger(), "skipping octomap for now ...");
       continue;
     }
+    RCLCPP_INFO(getLogger(), "iterating inside collision object's shapes");
     for (const auto& shape : collision_object->shapes_)
     {
-      RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
       const auto& pose = collision_object->shape_poses_[0];
+      const auto& shape_type = collision_object->shapes_[0]->type;
+      RCLCPP_INFO(getLogger(), "Shape type: %d, object id: %s, shape: %s", shape_type, object, shape);
+
+      switch (shape_type){
+        case shapes::ShapeType::BOX: {
+
+          const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
+          RCLCPP_INFO(getLogger(), "Box, size: %f", objectptr->size[0]); // shape.size
+          const SourceId box_source_id = scene_graph.RegisterSource("template_box");
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+            box_source_id,
+            std::make_unique<GeometryInstance>(
+              RigidTransformd(pose),
+              std::make_unique<Box>(
+                objectptr->size[0],
+                objectptr->size[0],
+                objectptr->size[0]), 
+              "box"));
+
+          // add illustration, proximity, perception properties
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+        }
+        case shapes::ShapeType::UNKNOWN_SHAPE: {
+          RCLCPP_INFO(getLogger(), "Unknown shape, ignoring in scene graph");
+          break;
+        }
+        case shapes::ShapeType::SPHERE:{
+          const auto objectptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
+          const SourceId box_source_id = scene_graph.RegisterSource("template_sphere");
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+            box_source_id,
+            std::make_unique<GeometryInstance>(
+              RigidTransformd(pose),
+              std::make_unique<Sphere>(
+                objectptr->radius), "sphere"));
+          RCLCPP_INFO(getLogger(), "Sphere");
+
+          // add illustration, proximity, perception properties
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+        }
+        case shapes::ShapeType::CYLINDER:{
+          RCLCPP_INFO(getLogger(), "Cylinder");
+          break;
+        }
+        case shapes::ShapeType::CONE:{
+          RCLCPP_INFO(getLogger(), "Cone");
+          break;
+        }
+      }
 
       // Creates a box geometry and anchors it to the world origin. Better
       // approach is to create a ground object, anchor that, and then anchor
       // every non-moving entity to the ground plane
       // TODO: Create and anchor ground entity
-      Vector3d p(0.3, -0.3, 0.5);
-      const SourceId box_source_id = scene_graph.RegisterSource("box1");
-      const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-          box_source_id, std::make_unique<GeometryInstance>(
-                             RigidTransformd(p), std::make_unique<Box>(0.15, 0.15, 0.15),
-                             "box"));  // hard coded for now because I know box dimensions and pose, from
+      // Vector3d p(0.3, -0.3, 0.5);
+      // const SourceId box_source_id = scene_graph.RegisterSource("box1");
+      // const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+      //     box_source_id, std::make_unique<GeometryInstance>(
+      //                        RigidTransformd(pose), std::make_unique<Box>(0.15, 0.15, 0.15),
+      //                        "box"));  // hard coded for now because I know box dimensions and pose, from
 
-      // add illustration, proximity, perception properties
-      scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-      scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-      scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+      // // add illustration, proximity, perception properties
+      // scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+      // scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+      // scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
     }
   }
 }

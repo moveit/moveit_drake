@@ -1,5 +1,5 @@
 services:
-  moveit:
+  moveit_drake:
     image: moveit_drake:latest
     container_name: moveit_drake
     build:
