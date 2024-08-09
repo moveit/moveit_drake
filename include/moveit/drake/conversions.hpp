@@ -82,8 +82,11 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
     breaks.emplace_back(robot_trajectory.getWayPointDurationFromStart(i));
   }
 
+  const Eigen::VectorXd zeros_vector = Eigen::VectorXd::Zero(samples.at(0).size());
+
   // Create a piecewise polynomial trajectory
-  return ::drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(breaks, samples);
+  return ::drake::trajectories::PiecewisePolynomial<double>::CubicWithContinuousSecondDerivatives(
+      breaks, samples, zeros_vector, zeros_vector);
 }
 
 /**
