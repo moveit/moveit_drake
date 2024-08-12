@@ -30,6 +30,7 @@ namespace ktopt_interface
 using drake::geometry::AddRigidHydroelasticProperties;
 using drake::geometry::Box;
 using drake::geometry::Sphere;
+using drake::geometry::Cylinder;
 using drake::geometry::FrameId;
 using drake::geometry::GeometryFrame;
 using drake::geometry::GeometryId;
