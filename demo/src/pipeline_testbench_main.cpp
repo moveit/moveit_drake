@@ -213,6 +213,19 @@ public:
       planning_scene_monitor::LockedPlanningSceneRW scene(moveit_cpp_->getPlanningSceneMonitorNonConst());
       scene->removeAllCollisionObjects();
       scene->processPlanningSceneWorldMsg(scene_msg.world);
+
+      // Remove collision objects containing "Can" from the scene so that more motions are feasible
+      const std::vector<std::string>& object_ids = scene->getWorld()->getObjectIds();
+      for (const std::string& object_id : object_ids)
+      {
+        if (object_id.find("Can") != std::string::npos)
+        {
+          moveit_msgs::msg::CollisionObject object_to_remove;
+          object_to_remove.id = object_id;
+          object_to_remove.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+          scene->processCollisionObjectMsg(object_to_remove);
+        }
+      }
     }  // Unlock PlanningScene
 
     RCLCPP_INFO(LOGGER, "Loaded planning scene successfully");
