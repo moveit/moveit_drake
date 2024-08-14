@@ -23,7 +23,37 @@ namespace
 {
 const rclcpp::Logger LOGGER = rclcpp::get_logger("pipeline_testbench");
 const std::string PLANNING_GROUP = "panda_arm";
-static const std::vector<std::string> CONTROLLERS(1, "panda_arm_controller");
+const std::vector<std::string> CONTROLLERS(1, "panda_arm_controller");
+const std::vector<std::string> SENSED_SCENE_NAMES = {
+  "bookshelf_small_panda//scene_sensed0001.yaml", "bookshelf_tall_panda//scene_sensed0001.yaml",
+  "bookshelf_thin_panda//scene_sensed0001.yaml",  "cage_panda//scene_sensed0001.yaml",
+  "kitchen_panda//scene_sensed0001.yaml",         "table_bars_panda//scene_sensed0001.yaml",
+  "table_pick_panda//scene_sensed0001.yaml",      "table_under_pick_panda//scene_sensed0001.yaml"
+};
+
+const std::vector<std::string> SCENE_NAMES = {
+  "bookshelf_small_panda//scene0001.yaml", "bookshelf_tall_panda//scene0001.yaml",
+  "bookshelf_thin_panda//scene0001.yaml",  "cage_panda//scene0001.yaml",
+  "kitchen_panda//scene0001.yaml",         "table_bars_panda//scene0001.yaml",
+  "table_pick_panda//scene0001.yaml",      "table_under_pick_panda//scene0001.yaml"
+};
+
+const std::vector<std::string> ALL_SCENE_NAMES = { "bookshelf_small_panda//scene0001.yaml",
+                                                   "bookshelf_small_panda//scene_sensed0001.yaml",
+                                                   "bookshelf_tall_panda//scene0001.yaml",
+                                                   "bookshelf_tall_panda//scene_sensed0001.yaml",
+                                                   "bookshelf_thin_panda//scene0001.yaml",
+                                                   "bookshelf_thin_panda//scene_sensed0001.yaml",
+                                                   "cage_panda//scene0001.yaml",
+                                                   "cage_panda//scene_sensed0001.yaml",
+                                                   "kitchen_panda//scene0001.yaml",
+                                                   "kitchen_panda//scene_sensed0001.yaml",
+                                                   "table_bars_panda//scene0001.yaml",
+                                                   "table_bars_panda//scene_sensed0001.yaml",
+                                                   "table_pick_panda//scene0001.yaml",
+                                                   "table_pick_panda//scene_sensed0001.yaml",
+                                                   "table_under_pick_panda//scene0001.yaml"
+                                                   "table_under_pick_panda//scene_sensed0001.yaml" };
 }  // namespace
 namespace pipeline_testbench
 {
@@ -97,6 +127,12 @@ public:
   {
     moveit_cpp_->getPlanningSceneMonitorNonConst()->providePlanningSceneService();
 
+    {
+      planning_scene_monitor::LockedPlanningSceneRW scene(moveit_cpp_->getPlanningSceneMonitorNonConst());
+      scene->getCurrentStateNonConst().setVariablePosition("panda_finger_joint1", 0.04);
+      scene->getCurrentStateNonConst().setVariablePosition("panda_finger_joint2", 0.04);
+    }
+
     visual_tools_.deleteAllMarkers();
     visual_tools_.loadRemoteControl();
 
@@ -104,29 +140,15 @@ public:
     text_pose.translation().z() = 1.75;
     visual_tools_.publishText(text_pose, "Pipeline Testbench", rvt::WHITE, rvt::XLARGE);
     visual_tools_.trigger();
-
-    // TODO: temporary change to planning scene, adds a box replace once
-    // integration tests are implemented
-    geometry_msgs::msg::Pose block_pose;
-    block_pose.position.z = 0.5;
-    block_pose.position.y = -0.3;
-    block_pose.position.x = 0.3;
-    visual_tools_.publishCollisionBlock(block_pose, "test_block", 0.15);
   }
 
-  bool loadPlanningSceneAndQuery()
+  bool loadPlanningSceneAndQuery(const std::string& scene_name, std::string query_name = "Motion Plan Request 0")
   {
     std::string hostname = "";
     int port = 0.0;
-    std::string scene_name = "";
 
     node_->get_parameter_or(std::string("warehouse.host"), hostname, std::string("127.0.0.1"));
     node_->get_parameter_or(std::string("warehouse.port"), port, 33829);
-
-    if (!node_->get_parameter("warehouse.scene_name", scene_name))
-    {
-      RCLCPP_WARN(LOGGER, "Warehouse scene_name NOT specified");
-    }
 
     moveit_warehouse::PlanningSceneStorage* planning_scene_storage = nullptr;
 
@@ -189,27 +211,38 @@ public:
     // Add object to planning scene
     {  // Lock PlanningScene
       planning_scene_monitor::LockedPlanningSceneRW scene(moveit_cpp_->getPlanningSceneMonitorNonConst());
+      scene->removeAllCollisionObjects();
       scene->processPlanningSceneWorldMsg(scene_msg.world);
+
+      // Remove collision objects containing "Can" from the scene so that more motions are feasible
+      const std::vector<std::string>& object_ids = scene->getWorld()->getObjectIds();
+      for (const std::string& object_id : object_ids)
+      {
+        if (object_id.find("Can") != std::string::npos)
+        {
+          moveit_msgs::msg::CollisionObject object_to_remove;
+          object_to_remove.id = object_id;
+          object_to_remove.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+          scene->processCollisionObjectMsg(object_to_remove);
+        }
+      }
     }  // Unlock PlanningScene
 
     RCLCPP_INFO(LOGGER, "Loaded planning scene successfully");
 
     // Get planning scene query
-    for (int index = 0; index < 10; index++)
+    moveit_warehouse::MotionPlanRequestWithMetadata planning_query;
+    try
     {
-      moveit_warehouse::MotionPlanRequestWithMetadata planning_query;
-      std::string query_name = "kitchen_panda_scene_sensed" + std::to_string(index) + "_query";
-      try
-      {
-        planning_scene_storage->getPlanningQuery(planning_query, scene_name, query_name);
-      }
-      catch (std::exception& ex)
-      {
-        RCLCPP_ERROR(LOGGER, "Error loading motion planning query '%s': %s", query_name.c_str(), ex.what());
-      }
-
-      motion_plan_requests.push_back(static_cast<moveit_msgs::msg::MotionPlanRequest>(*planning_query));
+      planning_scene_storage->getPlanningQuery(planning_query, scene_name, query_name);
     }
+    catch (std::exception& ex)
+    {
+      RCLCPP_ERROR(LOGGER, "Error loading motion planning query '%s': %s", query_name.c_str(), ex.what());
+    }
+    motion_plan_requests.clear();
+    motion_plan_requests.push_back(static_cast<moveit_msgs::msg::MotionPlanRequest>(*planning_query));
+
     visual_tools_.prompt("Press 'next' in the RvizVisualToolsGui window to start the demo");
     visual_tools_.trigger();
     return true;
@@ -322,21 +355,26 @@ int main(int argc, char** argv)
 
   pipeline_testbench::Demo demo(node);
 
-  if (!demo.loadPlanningSceneAndQuery())
+  for (const auto& scene_name : ALL_SCENE_NAMES)
   {
-    rclcpp::shutdown();
-    return 0;
-  }
+    if (!demo.loadPlanningSceneAndQuery(scene_name))
+    {
+      rclcpp::shutdown();
+      return 0;
+    }
 
-  RCLCPP_INFO(LOGGER, "Starting Pipeline Testbench example ...");
-  for (const auto& motion_plan_req : demo.getMotionPlanRequests())
-  {
-    demo.planAndVisualize(
-        { { "ompl", "RRTConnectkConfigDefault" }, { "stomp", "stomp" }, { "drake_ktopt", "" }, { "drake_toppra", "" } },
-        motion_plan_req);
+    RCLCPP_INFO(LOGGER, "Starting Pipeline Testbench example ...");
+    for (const auto& motion_plan_req : demo.getMotionPlanRequests())
+    {
+      demo.planAndVisualize({ { "ompl", "RRTConnectkConfigDefault" },
+                              { "stomp", "stomp" },
+                              { "drake_ktopt", "" },
+                              { "drake_toppra", "" } },
+                            motion_plan_req);
+    }
   }
-
   demo.getVisualTools().prompt("Press 'next' in the RvizVisualToolsGui window to finish the demo");
+
   rclcpp::shutdown();
   return 0;
 }

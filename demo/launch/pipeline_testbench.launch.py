@@ -58,7 +58,7 @@ def launch_setup(context, *args, **kwargs):
     sqlite_database = os.path.join(
         get_package_share_directory("moveit_benchmark_resources"),
         "databases",
-        "panda_kitchen_test_db.sqlite",
+        "panda_benchmarks.sqlite",
     )
 
     warehouse_ros_config = {
