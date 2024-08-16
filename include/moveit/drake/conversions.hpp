@@ -73,13 +73,6 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
   std::vector<Eigen::MatrixXd> samples;
   samples.reserve(robot_trajectory.getWayPointCount());
 
-  // Print the first and last point of the trajectory
-  const auto& first_point = robot_trajectory.getWayPoint(0);
-  const auto& last_point = robot_trajectory.getWayPoint(robot_trajectory.getWayPointCount() - 1);
-  Eigen::VectorXd first_position(first_point.getVariableCount());
-  Eigen::VectorXd last_position(last_point.getVariableCount());
-  first_point.copyJointGroupPositions(group, first_position);
-  last_point.copyJointGroupPositions(group, last_position);
   // Create samples & breaks
   for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i)
   {
