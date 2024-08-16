@@ -268,7 +268,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
 
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
           RCLCPP_INFO(getLogger(), "Box, size: %f", objectptr->size[0]); // shape.size
-          const SourceId box_source_id = scene_graph.RegisterSource("template_box");
+          const SourceId box_source_id = scene_graph.RegisterSource(object);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
             box_source_id,
             std::make_unique<GeometryInstance>(
@@ -276,8 +276,8 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
               std::make_unique<Box>(
                 objectptr->size[0],
                 objectptr->size[0],
-                objectptr->size[0]), 
-              "box"));
+                objectptr->size[0]),
+              object));
 
           // add illustration, proximity, perception properties
           scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
@@ -291,13 +291,13 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         }
         case shapes::ShapeType::SPHERE:{
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
-          const SourceId box_source_id = scene_graph.RegisterSource("template_sphere");
+          const SourceId box_source_id = scene_graph.RegisterSource(object);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
             box_source_id,
             std::make_unique<GeometryInstance>(
               RigidTransformd(pose),
               std::make_unique<Sphere>(
-                objectptr->radius), "sphere"));
+                objectptr->radius), object));
           RCLCPP_INFO(getLogger(), "Sphere");
 
           // add illustration, proximity, perception properties
@@ -308,20 +308,19 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         }
         case shapes::ShapeType::CYLINDER:{
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
-          const SourceId box_source_id = scene_graph.RegisterSource("template_cylinder");
+          const SourceId box_source_id = scene_graph.RegisterSource(object);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
             box_source_id,
             std::make_unique<GeometryInstance>(
               RigidTransformd(pose),
               std::make_unique<Cylinder>(
-                objectptr->radius, objectptr->length), "cylinder"));
+                objectptr->radius, objectptr->length), object));
           RCLCPP_INFO(getLogger(), "Cylinder");
 
           // add illustration, proximity, perception properties
           scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
           scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
           scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
-          RCLCPP_INFO(getLogger(), "Cylinder");
           break;
         }
         case shapes::ShapeType::CONE:{
