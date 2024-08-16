@@ -80,8 +80,6 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
   Eigen::VectorXd last_position(last_point.getVariableCount());
   first_point.copyJointGroupPositions(group, first_position);
   last_point.copyJointGroupPositions(group, last_position);
-  std::cout << "First point: " << first_position.transpose() << std::endl;
-  std::cout << "Last point: " << last_position.transpose() << std::endl;
   // Create samples & breaks
   for (std::size_t i = 0; i < robot_trajectory.getWayPointCount(); ++i)
   {
@@ -90,9 +88,6 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
     state.copyJointGroupPositions(group, position);
     samples.emplace_back(position);
     breaks.emplace_back(robot_trajectory.getWayPointDurationFromStart(i));
-
-    std::cout << "breaks" << i << ": " << robot_trajectory.getWayPointDurationFromStart(i) << std::endl;
-    std::cout << "position" << i << ": " << position.transpose() << std::endl;
   }
 
   // Create a piecewise polynomial trajectory
@@ -116,23 +111,17 @@ void getRobotTrajectory(const ::drake::trajectories::PiecewisePolynomial<double>
   // Get the start and end times of the piecewise polynomial
   double t_prev = 0.0;
   const auto num_pts = static_cast<size_t>(std::ceil(piecewise_polynomial.end_time() / delta_t) + 1);
-  std::cout << "delta_t" << delta_t << std::endl;
-  std::cout << "piecewise_polynomial.end_time()" << piecewise_polynomial.end_time() << std::endl;
-  std::cout << "num_pts" << num_pts << std::endl;
 
   for (unsigned int i = 0; i < num_pts; ++i)
   {
     const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
     const auto t = std::min(t_scale, 1.0) * piecewise_polynomial.end_time();
     const auto pos_val = piecewise_polynomial.value(t);
-    std::cout << "pos_val" << i << ": " << pos_val.transpose() << std::endl;
     const auto vel_val = piecewise_polynomial.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(output_trajectory->getRobotModel());
     const auto active_joints = output_trajectory->getGroup()->getActiveJointModels();
     for (size_t joint_index = 0; joint_index < active_joints.size(); joint_index++)
     {
-      std::cout << "joint index" << joint_index << " Setting joint '" << active_joints[joint_index]->getName()
-                << "to : " << pos_val(joint_index) << std::endl;
       waypoint->setJointPositions(active_joints[joint_index], &pos_val(joint_index));
       waypoint->setJointVelocities(active_joints[joint_index], &vel_val(joint_index));
     }

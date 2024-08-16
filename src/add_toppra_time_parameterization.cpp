@@ -149,6 +149,7 @@ public:
 
     // Create drake::trajectories::Trajectory from moveit trajectory
     auto input_trajectory = getPiecewisePolynomial(*res.trajectory, joint_model_group);
+
     // Run toppra
     const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
     auto toppra = Toppra(input_trajectory, plant, grid_points);
@@ -211,7 +212,7 @@ public:
         return;
       }
     }
-    toppra.AddJointVelocityLimit(max_velocity, min_velocity);
+    toppra.AddJointVelocityLimit(min_velocity, max_velocity);
     toppra.AddJointAccelerationLimit(min_acceleration, max_acceleration);
     auto optimized_trajectory = toppra.SolvePathParameterization();
 
@@ -222,7 +223,8 @@ public:
       return;
     }
 
-    getRobotTrajectory(optimized_trajectory.value(), res.trajectory->getWayPointCount() /* TODO enable down sampling */,
+    getRobotTrajectory(optimized_trajectory.value(),
+                       input_trajectory.end_time() / res.trajectory->getWayPointCount() /* TODO enable down sampling */,
                        res.trajectory /* override previous solution with optimal trajectory*/);
     res.error_code = moveit::core::MoveItErrorCode::SUCCESS;
   }
