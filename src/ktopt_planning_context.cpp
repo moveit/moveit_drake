@@ -232,7 +232,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   // Planning scene -> World (getWorld, WorldConstPtr)
   // objectIds -> World.getObjectIds()
   // Object -> World.getObject(objectIds)
-  // 
+  //
   try
   {
     auto world = planning_scene.getWorld();
@@ -265,21 +265,18 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       const auto& shape_type = collision_object->shapes_[i]->type;
       RCLCPP_INFO(getLogger(), "Shape type: %d, object id: %s, shape: %s", shape_type, object, shape);
 
-      switch (shape_type){
-        case shapes::ShapeType::BOX: {
-
+      switch (shape_type)
+      {
+        case shapes::ShapeType::BOX:
+        {
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
-          RCLCPP_INFO(getLogger(), "Box, size: %f", objectptr->size[0]); // shape.size
+          RCLCPP_INFO(getLogger(), "Box, size: %f", objectptr->size[0]);  // shape.size
           const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-            box_source_id,
-            std::make_unique<GeometryInstance>(
-              convertToDrakeFrame(pose),
-              std::make_unique<Box>(
-                objectptr->size[0],
-                objectptr->size[1],
-                objectptr->size[2]),
-              shape_name));
+              box_source_id,
+              std::make_unique<GeometryInstance>(
+                  convertToDrakeFrame(pose),
+                  std::make_unique<Box>(objectptr->size[0], objectptr->size[1], objectptr->size[2]), shape_name));
 
           // add illustration, proximity, perception properties
           scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
@@ -287,19 +284,18 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
           break;
         }
-        case shapes::ShapeType::UNKNOWN_SHAPE: {
+        case shapes::ShapeType::UNKNOWN_SHAPE:
+        {
           RCLCPP_INFO(getLogger(), "Unknown shape, ignoring in scene graph");
           break;
         }
-        case shapes::ShapeType::SPHERE:{
+        case shapes::ShapeType::SPHERE:
+        {
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
           const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-            box_source_id,
-            std::make_unique<GeometryInstance>(
-              RigidTransformd(pose),
-              std::make_unique<Sphere>(
-                objectptr->radius), shape_name));
+              box_source_id, std::make_unique<GeometryInstance>(
+                                 RigidTransformd(pose), std::make_unique<Sphere>(objectptr->radius), shape_name));
           RCLCPP_INFO(getLogger(), "Sphere");
 
           // add illustration, proximity, perception properties
@@ -308,15 +304,14 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
           break;
         }
-        case shapes::ShapeType::CYLINDER:{
+        case shapes::ShapeType::CYLINDER:
+        {
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
           const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-            box_source_id,
-            std::make_unique<GeometryInstance>(
-              RigidTransformd(pose),
-              std::make_unique<Cylinder>(
-                objectptr->radius, objectptr->length), shape_name));
+              box_source_id,
+              std::make_unique<GeometryInstance>(
+                  RigidTransformd(pose), std::make_unique<Cylinder>(objectptr->radius, objectptr->length), shape_name));
           RCLCPP_INFO(getLogger(), "Cylinder");
 
           // add illustration, proximity, perception properties
@@ -325,7 +320,8 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
           break;
         }
-        case shapes::ShapeType::CONE:{
+        case shapes::ShapeType::CONE:
+        {
           RCLCPP_WARN(getLogger(), "Cone not supported in drake");
           break;
         }
@@ -336,35 +332,34 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   }
 }
 
-RigidTransformd KTOptPlanningContext::convertToDrakeFrame(const Eigen::Affine3d& ros_pose) {
-  // Convert a transformation frame in Moveit/ROS coordinate system (Z-up) to 
+RigidTransformd KTOptPlanningContext::convertToDrakeFrame(const Eigen::Affine3d& ros_pose)
+{
+  // Convert a transformation frame in Moveit/ROS coordinate system (Z-up) to
   // Drake's coordinate system (Y-up)
-    // Extract translation vector (position)
-    Vector3d position_ros = ros_pose.translation();
+  // Extract translation vector (position)
+  Vector3d position_ros = ros_pose.translation();
 
-    // Extract rotation matrix (orientation)
-    Matrix3d rotation_ros = ros_pose.linear();
+  // Extract rotation matrix (orientation)
+  Matrix3d rotation_ros = ros_pose.linear();
 
-    // Apply coordinate transformation to convert Z-up (ROS) to Y-up (Drake)
-    // This is a 90-degree rotation about the X-axis
-    Matrix3d R_ros_to_drake;
-    R_ros_to_drake << 1, 0, 0,
-                      0, 0, -1,
-                      0, 1, 0;
+  // Apply coordinate transformation to convert Z-up (ROS) to Y-up (Drake)
+  // This is a 90-degree rotation about the X-axis
+  Matrix3d R_ros_to_drake;
+  R_ros_to_drake << 1, 0, 0, 0, 0, -1, 0, 1, 0;
 
-    // Adjust the position and rotation for Drake's coordinate frame
-    Vector3d position_drake = R_ros_to_drake * position_ros;
-    Matrix3d rotation_drake = R_ros_to_drake * rotation_ros;
+  // Adjust the position and rotation for Drake's coordinate frame
+  Vector3d position_drake = R_ros_to_drake * position_ros;
+  Matrix3d rotation_drake = R_ros_to_drake * rotation_ros;
 
-    // Combine rotation and translation into an Eigen::Isometry3d
-    Eigen::Isometry3d drake_pose = Eigen::Isometry3d::Identity();
-    drake_pose.linear() = rotation_drake;
-    drake_pose.translation() = position_drake;
+  // Combine rotation and translation into an Eigen::Isometry3d
+  Eigen::Isometry3d drake_pose = Eigen::Isometry3d::Identity();
+  drake_pose.linear() = rotation_drake;
+  drake_pose.translation() = position_drake;
 
-    // Create a RigidTransform from the converted position and rotation
-    RigidTransformd rigid_transform(drake_pose);
+  // Create a RigidTransform from the converted position and rotation
+  RigidTransformd rigid_transform(drake_pose);
 
-    return rigid_transform;
+  return rigid_transform;
 }
 
 VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)

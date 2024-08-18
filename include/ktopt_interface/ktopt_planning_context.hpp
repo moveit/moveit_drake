@@ -29,7 +29,6 @@ namespace ktopt_interface
 // declare all namespaces to be used
 using drake::geometry::AddRigidHydroelasticProperties;
 using drake::geometry::Box;
-using drake::geometry::Sphere;
 using drake::geometry::Cylinder;
 using drake::geometry::FrameId;
 using drake::geometry::GeometryFrame;
@@ -45,6 +44,7 @@ using drake::geometry::ProximityProperties;
 using drake::geometry::Role;
 using drake::geometry::SceneGraph;
 using drake::geometry::SourceId;
+using drake::geometry::Sphere;
 using drake::math::RigidTransformd;
 using drake::multibody::AddMultibodyPlantSceneGraph;
 using drake::multibody::MinimumDistanceLowerBoundConstraint;
@@ -58,8 +58,8 @@ using drake::systems::Diagram;
 using drake::systems::DiagramBuilder;
 using drake::visualization::ApplyVisualizationConfig;
 using drake::visualization::VisualizationConfig;
-using Eigen::MatrixXd;
 using Eigen::Matrix3d;
+using Eigen::MatrixXd;
 using Eigen::Vector3d;
 using Eigen::VectorXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
