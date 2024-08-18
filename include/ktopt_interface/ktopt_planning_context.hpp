@@ -59,6 +59,7 @@ using drake::systems::DiagramBuilder;
 using drake::visualization::ApplyVisualizationConfig;
 using drake::visualization::VisualizationConfig;
 using Eigen::MatrixXd;
+using Eigen::Matrix3d;
 using Eigen::Vector3d;
 using Eigen::VectorXd;
 using Joints = std::vector<const moveit::core::JointModel*>;
@@ -79,6 +80,7 @@ public:
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
+  RigidTransformd convertToDrakeFrame(const Eigen::Affine3d& ros_pose);
 
 private:
   const ktopt_interface::Params params_;
