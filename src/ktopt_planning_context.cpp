@@ -228,11 +228,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
-  // NOTE: Information tree, to be deleted after implementation
-  // Planning scene -> World (getWorld, WorldConstPtr)
-  // objectIds -> World.getObjectIds()
-  // Object -> World.getObject(objectIds)
-  //
+  // Transcribed the planning scene into a drake scene graph
   try
   {
     auto world = planning_scene.getWorld();
@@ -253,7 +249,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     }
     if (object == OCTOMAP_NS)
     {
-      RCLCPP_INFO(getLogger(), "skipping octomap for now ...");
+      RCLCPP_INFO(getLogger(), "Octomap not supported for now ... ");
       continue;
     }
     RCLCPP_INFO(getLogger(), "iterating inside collision object's shapes");
@@ -263,7 +259,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       const auto& shape = collision_object->shapes_[i];
       const auto& pose = collision_object->shape_poses_[i];
       const auto& shape_type = collision_object->shapes_[i]->type;
-      RCLCPP_INFO(getLogger(), "Shape type: %d, object id: %s, shape: %s", shape_type, object, shape);
 
       switch (shape_type)
       {
@@ -286,7 +281,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         }
         case shapes::ShapeType::UNKNOWN_SHAPE:
         {
-          RCLCPP_INFO(getLogger(), "Unknown shape, ignoring in scene graph");
+          RCLCPP_WARN(getLogger(), "Unknown shape, ignoring in scene graph");
           break;
         }
         case shapes::ShapeType::SPHERE:
