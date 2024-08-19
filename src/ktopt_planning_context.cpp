@@ -272,6 +272,13 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
               std::make_unique<GeometryInstance>(
                   convertToDrakeFrame(pose),
                   std::make_unique<Box>(objectptr->size[0], objectptr->size[1], objectptr->size[2]), shape_name));
+          RCLCPP_INFO(
+              getLogger(), 
+              "translation of the body x:%f, y:%f, z:%f",
+              pose.translation().x(),
+              pose.translation().y(),
+              pose.translation().z()
+            );
 
           // add illustration, proximity, perception properties
           scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
