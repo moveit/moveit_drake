@@ -249,7 +249,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     }
     if (object == OCTOMAP_NS)
     {
-      RCLCPP_INFO(getLogger(), "Octomap not supported for now ... ");
+      RCLCPP_WARN(getLogger(), "Octomap not supported for now ... ");
       continue;
     }
     for (int i = 0; i < collision_object->shapes_.size(); ++i)
@@ -319,41 +319,15 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           RCLCPP_WARN(getLogger(), "Cone not supported in drake");
           break;
         }
+        default:
+        {
+          RCLCPP_WARN(getLogger(), "Shape TYPE conversation to drake is not implemented");
+        }
       }
 
       // TODO: Create and anchor ground entity
     }
   }
-}
-
-RigidTransformd KTOptPlanningContext::convertToDrakeFrame(const Eigen::Affine3d& ros_pose)
-{
-  // Convert a transformation frame in Moveit/ROS coordinate system (Z-up) to
-  // Drake's coordinate system (Y-up)
-  // Extract translation vector (position)
-  Vector3d position_ros = ros_pose.translation();
-
-  // Extract rotation matrix (orientation)
-  Matrix3d rotation_ros = ros_pose.linear();
-
-  // Apply coordinate transformation to convert Z-up (ROS) to Y-up (Drake)
-  // This is a 90-degree rotation about the X-axis
-  Matrix3d R_ros_to_drake;
-  R_ros_to_drake << 1, 0, 0, 0, 0, -1, 0, 1, 0;
-
-  // Adjust the position and rotation for Drake's coordinate frame
-  Vector3d position_drake = R_ros_to_drake * position_ros;
-  Matrix3d rotation_drake = R_ros_to_drake * rotation_ros;
-
-  // Combine rotation and translation into an Eigen::Isometry3d
-  Eigen::Isometry3d drake_pose = Eigen::Isometry3d::Identity();
-  drake_pose.linear() = rotation_drake;
-  drake_pose.translation() = position_drake;
-
-  // Create a RigidTransform from the converted position and rotation
-  RigidTransformd rigid_transform(drake_pose);
-
-  return rigid_transform;
 }
 
 VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)

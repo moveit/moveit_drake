@@ -80,7 +80,6 @@ public:
   void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
-  RigidTransformd convertToDrakeFrame(const Eigen::Affine3d& ros_pose);
 
 private:
   const ktopt_interface::Params params_;
