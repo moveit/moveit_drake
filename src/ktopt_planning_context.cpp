@@ -257,7 +257,8 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     {
       std::string shape_name = object + std::to_string(i);
       const auto& shape = collision_object->shapes_[i];
-      const auto& pose = collision_object->shape_poses_[i];
+      const auto& pose = collision_object->pose_;
+      const auto& shape_pose = collision_object->shape_poses_[i];
       const auto& shape_type = collision_object->shapes_[i]->type;
 
       switch (shape_type)
@@ -265,20 +266,12 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         case shapes::ShapeType::BOX:
         {
           const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
-          RCLCPP_INFO(getLogger(), "Box, size: %f", objectptr->size[0]);  // shape.size
           const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
           const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
               box_source_id,
               std::make_unique<GeometryInstance>(
-                  convertToDrakeFrame(pose),
+                  RigidTransformd(pose),
                   std::make_unique<Box>(objectptr->size[0], objectptr->size[1], objectptr->size[2]), shape_name));
-          RCLCPP_INFO(
-              getLogger(), 
-              "translation of the body x:%f, y:%f, z:%f",
-              pose.translation().x(),
-              pose.translation().y(),
-              pose.translation().z()
-            );
 
           // add illustration, proximity, perception properties
           scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
