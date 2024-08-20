@@ -228,7 +228,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
-  // Transcribed the planning scene into a drake scene graph
+  // Transcribe the planning scene into a drake scene graph
   try
   {
     auto world = planning_scene.getWorld();

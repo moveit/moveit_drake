@@ -60,14 +60,6 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 
 - Use [pre-commit to format your code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
 
-Tips for when inside the container
-
-    # Can be added to the entrypoint
-    git config --global --add safe.directory /root/workspace/src/moveit_drake/
-
-    cd src/moveit_drake
-    pre-commit run -a
-
 # Todo section
 
 This section keeps a list of immediate todos, will be deleted before repo release
