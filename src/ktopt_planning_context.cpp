@@ -252,7 +252,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       RCLCPP_INFO(getLogger(), "Octomap not supported for now ... ");
       continue;
     }
-    RCLCPP_INFO(getLogger(), "iterating inside collision object's shapes");
     for (int i = 0; i < collision_object->shapes_.size(); ++i)
     {
       std::string shape_name = object + std::to_string(i);
