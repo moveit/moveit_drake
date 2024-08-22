@@ -25,7 +25,7 @@ KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::s
   // Do some drake initialization may be
 }
 
-void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& /*res*/ ß)
+void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& /*res*/)
 {
   RCLCPP_ERROR(getLogger(),
                "KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&) is not implemented!");
