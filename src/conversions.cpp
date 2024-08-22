@@ -106,7 +106,6 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
   {
     const auto& joint_name = joint_model->getName();
     const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
-    std::cout << "Joint name: " << joint_name << " Joint index: " << joint_index << std::endl;
     joint_positions(joint_index) = moveit_state.getVariablePosition(joint_name);
   }
   return joint_positions;
