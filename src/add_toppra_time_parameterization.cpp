@@ -137,9 +137,9 @@ public:
     auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
     auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
     const auto& current_state = planning_scene->getCurrentState();
-    VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
-    q << moveit::drake::getJointPositions(current_state, getGroupName(), plant);
-    q << moveit::drake::getJointVelocities(current_state, getGroupName(), plant);
+    Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+    q << moveit::drake::getJointPositions(current_state, joint_model_group->getName(), plant);
+    q << moveit::drake::getJointVelocities(current_state, joint_model_group->getName(), plant);
     plant.SetPositionsAndVelocities(&plant_context, q);
 
     // Create drake::trajectories::Trajectory from moveit trajectory
