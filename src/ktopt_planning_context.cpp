@@ -49,12 +49,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const auto& joints = joint_model_group->getActiveJointModels();
 
-  // Print all joint names
-  // for (const auto& joint : joints)
-  //{
-  //  RCLCPP_INFO_STREAM(getLogger(), "Joint name: " << joint->getName());
-  //}
-
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
   q << moveit::drake::getJointPositions(start_state, getGroupName(), plant);
