@@ -119,7 +119,6 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
   for (const auto& joint_model : joint_model_group->getActiveJointModels())
   {
     const auto& joint_name = joint_model->getName();
-    ;
     const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
     joint_velocities(joint_index) = moveit_state.getVariableVelocity(joint_name);
   }
