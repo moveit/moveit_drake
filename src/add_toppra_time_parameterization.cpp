@@ -91,7 +91,7 @@ public:
 
     // TODO(sjahr) Replace with subscribed robot description
     const char* ModelUrl = "package://drake_models/franka_description/"
-                           "urdf/panda_arm.urdf";
+                           "urdf/panda_arm_hand.urdf";
     const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
     Parser(&plant, &scene_graph).AddModels(urdf);
     plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
@@ -137,14 +137,9 @@ public:
     auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
     auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
     const auto& current_state = planning_scene->getCurrentState();
-    Eigen::VectorXd q_pos = Eigen::VectorXd::Zero(joint_model_group->getActiveVariableCount());
-    Eigen::VectorXd q_vel = Eigen::VectorXd::Zero(joint_model_group->getActiveVariableCount());
-    Eigen::VectorXd q = Eigen::VectorXd::Zero(2 * joint_model_group->getActiveVariableCount());
-
-    current_state.copyJointGroupPositions(joint_model_group, q_pos);
-    current_state.copyJointGroupVelocities(joint_model_group, q_vel);
-    q << q_pos;
-    q << q_vel;
+    VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+    q << moveit::drake::getJointPositions(current_state, getGroupName(), plant);
+    q << moveit::drake::getJointVelocities(current_state, getGroupName(), plant);
     plant.SetPositionsAndVelocities(&plant_context, q);
 
     // Create drake::trajectories::Trajectory from moveit trajectory

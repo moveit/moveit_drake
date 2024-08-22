@@ -48,13 +48,6 @@
 #include <drake/common/trajectories/piecewise_polynomial.h>
 namespace moveit::drake
 {
-
-using ::drake::geometry::SceneGraph;
-using ::drake::multibody::AddMultibodyPlantSceneGraph;
-using ::drake::multibody::MultibodyPlant;
-using ::drake::multibody::Parser;
-using ::drake::systems::DiagramBuilder;
-
 /**
  * @brief Create a Piecewise Polynomial from a moveit trajectory (see
  * https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html)
@@ -77,4 +70,28 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
  */
 void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
                         std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory);
+
+/**
+ * @brief Get a joint positions vector for a MultibodyPlant from a MoveIt robot state
+ *
+ * @param moveit_state MoveIt Robot state
+ * @param group_name Name of the joint group
+ * @param plant Drake Multibody Plant
+ * @return Vector with drake joint positions
+ */
+[[nodiscard]] Eigen::VectorXd getJointPositions(const moveit::core::RobotState& moveit_state,
+                                                const std::string& group_name,
+                                                const ::drake::multibody::MultibodyPlant<double>& plant);
+
+/**
+ * @brief Get a joint velocities vector for a MultibodyPlant from a MoveIt robot state
+ *
+ * @param moveit_state MoveIt Robot state
+ * @param group_name Name of the joint group
+ * @param plant Drake Multibody Plant
+ * @return Vector with drake joint velocities
+ */
+[[nodiscard]] Eigen::VectorXd getJointVelocities(const moveit::core::RobotState& moveit_state,
+                                                 const std::string& group_name,
+                                                 const ::drake::multibody::MultibodyPlant<double>& plant);
 }  // namespace moveit::drake

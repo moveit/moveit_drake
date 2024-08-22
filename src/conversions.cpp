@@ -33,12 +33,11 @@
  *********************************************************************/
 
 /* Author: Sebastian Jahr
-*/
+ */
 
 #include <moveit/drake/conversions.hpp>
 namespace moveit::drake
 {
-
 using ::drake::geometry::SceneGraph;
 using ::drake::multibody::AddMultibodyPlantSceneGraph;
 using ::drake::multibody::MultibodyPlant;
@@ -71,6 +70,9 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
 void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
                         std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory)
 {
+  // Reset output trajectory
+  moveit_trajectory->clear();
+
   // Get the start and end times of the piecewise polynomial
   double t_prev = 0.0;
   const auto num_pts = static_cast<size_t>(std::ceil(drake_trajectory.end_time() / delta_t) + 1);
@@ -82,8 +84,8 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
     const auto pos_val = drake_trajectory.value(t);
     const auto vel_val = drake_trajectory.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(moveit_trajectory->getRobotModel());
-    const auto active_joints = moveit_trajectory->getRobotModel()->getActiveJointModels();
-    for (size_t joint_index = 0; joint_index < active_joints.size(); ++joint_index)
+    const auto active_joints = moveit_trajectory->getGroup()->getActiveJointModels();
+    for (size_t joint_index = 0; joint_index < active_joints.size(); joint_index++)
     {
       waypoint->setJointPositions(active_joints[joint_index], &pos_val(joint_index));
       waypoint->setJointVelocities(active_joints[joint_index], &vel_val(joint_index));
@@ -92,5 +94,36 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
     moveit_trajectory->addSuffixWayPoint(waypoint, t - t_prev);
     t_prev = t;
   }
+}
+
+[[nodiscard]] Eigen::VectorXd getJointPositions(const moveit::core::RobotState& moveit_state,
+                                                const std::string& group_name, const MultibodyPlant<double>& plant)
+{
+  Eigen::VectorXd joint_positions = Eigen::VectorXd::Zero(plant.num_positions());
+
+  const auto& joint_model_group = moveit_state.getRobotModel()->getJointModelGroup(group_name);
+  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  {
+    const auto& joint_name = joint_model->getName();
+    const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
+    std::cout << "Joint name: " << joint_name << " Joint index: " << joint_index << std::endl;
+    joint_positions(joint_index) = moveit_state.getVariablePosition(joint_name);
+  }
+  return joint_positions;
+}
+
+[[nodiscard]] Eigen::VectorXd getJointVelocities(const moveit::core::RobotState& moveit_state,
+                                                 const std::string& group_name, const MultibodyPlant<double>& plant)
+{
+  Eigen::VectorXd joint_velocities = Eigen::VectorXd::Zero(plant.num_velocities());
+  const auto& joint_model_group = moveit_state.getRobotModel()->getJointModelGroup(group_name);
+  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  {
+    const auto& joint_name = joint_model->getName();
+    ;
+    const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
+    joint_velocities(joint_index) = moveit_state.getVariableVelocity(joint_name);
+  }
+  return joint_velocities;
 }
 }  // namespace moveit::drake
