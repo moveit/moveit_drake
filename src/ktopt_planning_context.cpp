@@ -160,7 +160,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     visualizer_->ForcedPublish(vis_context);
 
     // Without these sleeps, the visualizer won't give you time to load your browser
-    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 1000.0)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
   }
   visualizer_->StopRecording();
   visualizer_->PublishRecording();
@@ -228,6 +228,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
 void KTOptPlanningContext::transcribePlanningScene(const planning_scene::PlanningScene& planning_scene)
 {
+  // Transcribe the planning scene into a drake scene graph
   try
   {
     auto world = planning_scene.getWorld();
@@ -248,29 +249,83 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     }
     if (object == OCTOMAP_NS)
     {
-      RCLCPP_ERROR(getLogger(), "skipping octomap for now ...");
+      RCLCPP_WARN(getLogger(), "Octomap not supported for now ... ");
       continue;
     }
-    for (const auto& shape : collision_object->shapes_)
+    for (int i = 0; i < collision_object->shapes_.size(); ++i)
     {
-      RCLCPP_ERROR(getLogger(), "iterating inside collision object's shapes");
-      const auto& pose = collision_object->shape_poses_[0];
+      std::string shape_name = object + std::to_string(i);
+      const auto& shape = collision_object->shapes_[i];
+      const auto& pose = collision_object->pose_;
+      const auto& shape_pose = collision_object->shape_poses_[i];
+      const auto& shape_type = collision_object->shapes_[i]->type;
 
-      // Creates a box geometry and anchors it to the world origin. Better
-      // approach is to create a ground object, anchor that, and then anchor
-      // every non-moving entity to the ground plane
+      switch (shape_type)
+      {
+        case shapes::ShapeType::BOX:
+        {
+          const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
+          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+              box_source_id,
+              std::make_unique<GeometryInstance>(
+                  RigidTransformd(pose),
+                  std::make_unique<Box>(objectptr->size[0], objectptr->size[1], objectptr->size[2]), shape_name));
+
+          // add illustration, proximity, perception properties
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+        }
+        case shapes::ShapeType::UNKNOWN_SHAPE:
+        {
+          RCLCPP_WARN(getLogger(), "Unknown shape, ignoring in scene graph");
+          break;
+        }
+        case shapes::ShapeType::SPHERE:
+        {
+          const auto objectptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
+          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+              box_source_id, std::make_unique<GeometryInstance>(
+                                 RigidTransformd(pose), std::make_unique<Sphere>(objectptr->radius), shape_name));
+          RCLCPP_INFO(getLogger(), "Sphere");
+
+          // add illustration, proximity, perception properties
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+        }
+        case shapes::ShapeType::CYLINDER:
+        {
+          const auto objectptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
+          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
+          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
+              box_source_id,
+              std::make_unique<GeometryInstance>(
+                  RigidTransformd(pose), std::make_unique<Cylinder>(objectptr->radius, objectptr->length), shape_name));
+          RCLCPP_INFO(getLogger(), "Cylinder");
+
+          // add illustration, proximity, perception properties
+          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
+          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          break;
+        }
+        case shapes::ShapeType::CONE:
+        {
+          RCLCPP_WARN(getLogger(), "Cone not supported in drake");
+          break;
+        }
+        default:
+        {
+          RCLCPP_WARN(getLogger(), "Shape TYPE conversation to drake is not implemented");
+        }
+      }
+
       // TODO: Create and anchor ground entity
-      Vector3d p(0.3, -0.3, 0.5);
-      const SourceId box_source_id = scene_graph.RegisterSource("box1");
-      const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-          box_source_id, std::make_unique<GeometryInstance>(
-                             RigidTransformd(p), std::make_unique<Box>(0.15, 0.15, 0.15),
-                             "box"));  // hard coded for now because I know box dimensions and pose, from
-
-      // add illustration, proximity, perception properties
-      scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-      scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-      scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
     }
   }
 }

@@ -22,4 +22,4 @@ repositories:
   moveit_benchmark_resources:
     type: git
     url: https://github.com/sjahr/moveit_benchmark_resources
-    version: pr-update-database-usage
+    version: pr-fix-motion-plan-requests

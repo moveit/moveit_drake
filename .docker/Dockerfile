@@ -26,6 +26,7 @@ RUN apt update && \
     apt install -y \
         build-essential \
         clang-format-14 \
+        clangd-12 \
         cmake \
         git-lfs \
         python3-colcon-common-extensions \
@@ -36,7 +37,8 @@ RUN apt update && \
         ros-dev-tools \
         ros-${ROS_DISTRO}-desktop \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-        wget
+        wget && \
+    update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
 
 RUN pip3 install colcon-mixin pre-commit && \
     colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
