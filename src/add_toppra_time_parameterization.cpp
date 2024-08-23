@@ -47,6 +47,12 @@
 #include <drake/systems/framework/diagram_builder.h>
 #include <drake/multibody/plant/multibody_plant.h>
 #include <drake/multibody/optimization/toppra.h>
+
+/* Visualization */
+#include "drake/geometry/meshcat.h"
+#include "drake/geometry/meshcat_visualizer.h"
+#include "drake/geometry/drake_visualizer.h"
+#include "drake/geometry/meshcat_params.h"
 // #include <toppra_parameters.hpp>
 
 namespace moveit::drake
@@ -61,6 +67,11 @@ using ::drake::multibody::Toppra;
 using ::drake::systems::Context;
 using ::drake::systems::Diagram;
 using ::drake::systems::DiagramBuilder;
+
+using ::drake::geometry::Meshcat;
+using ::drake::geometry::MeshcatParams;
+using ::drake::geometry::MeshcatVisualizer;
+using ::drake::geometry::MeshcatVisualizerParams;
 
 namespace
 {
@@ -91,13 +102,21 @@ public:
 
     // TODO(sjahr) Replace with subscribed robot description
     const char* ModelUrl = "package://drake_models/franka_description/"
-                           "urdf/panda_arm_hand.urdf";
+                           "urdf/panda_arm.urdf";
     const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
     Parser(&plant, &scene_graph).AddModels(urdf);
     plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
 
     // for now finalize plant here
     plant.Finalize();
+
+    const auto meshcat_params = MeshcatParams();
+    meshcat_ = std::make_shared<Meshcat>(meshcat_params);
+
+    MeshcatVisualizerParams meshcat_viz_params;
+    auto& visualizer =
+        MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_, std::move(meshcat_viz_params));
+    visualizer_ = &visualizer;
 
     diagram_ = builder->Build();
     diagram_context_ = diagram_->CreateDefaultContext();
@@ -108,8 +127,8 @@ public:
     return std::string("AddToppraTimeParameterization");
   }
 
-  void adapt(const planning_scene::PlanningSceneConstPtr& planning_scene,
-             const planning_interface::MotionPlanRequest& /* req */,
+  void adapt(const planning_scene::PlanningSceneConstPtr& /*planning_scene*/,
+             const planning_interface::MotionPlanRequest& /*req*/,
              planning_interface::MotionPlanResponse& res) const override
   {
     // Check if res contains a path
@@ -219,8 +238,31 @@ public:
     }
 
     getRobotTrajectory(optimized_trajectory.value(),
-                       input_trajectory.end_time() / res.trajectory->getWayPointCount() /* TODO enable down sampling */,
+                       optimized_trajectory.value().end_time() / res.trajectory->getWayPointCount() /* TODO enable down sampling */,
                        res.trajectory /* override previous solution with optimal trajectory*/);
+
+    // meshcat experiment
+    auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+    visualizer_->ForcedPublish(vis_context);
+
+    // Visualize the trajectory with Meshcat
+    visualizer_->StartRecording();
+    double t_prev = 0.0;
+    const auto num_pts = res.trajectory->getWayPointCount();
+    for (unsigned int i = 0; i < num_pts; ++i)
+    {
+      const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+      const auto t = std::min(t_scale, 1.0) * optimized_trajectory.value().end_time();
+      plant.SetPositions(&plant_context, optimized_trajectory.value().value(t));
+      auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+      visualizer_->ForcedPublish(vis_context);
+      t_prev = t;
+      // Without these sleeps, the visualizer won't give you time to load your browser
+      std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    }
+    visualizer_->StopRecording();
+    visualizer_->PublishRecording();
+
     res.error_code = moveit::core::MoveItErrorCode::SUCCESS;
   }
 
@@ -228,6 +270,10 @@ protected:
   // std::unique_ptr<default_response_adapter_parameters::ParamListener> param_listener_;
   std::unique_ptr<Diagram<double>> diagram_;
   std::unique_ptr<Context<double>> diagram_context_;
+
+  // Temporary visualization
+    std::shared_ptr<Meshcat> meshcat_;
+  MeshcatVisualizer<double>* visualizer_;
 };
 
 }  // namespace moveit::drake
