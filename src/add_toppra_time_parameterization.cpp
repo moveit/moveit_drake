@@ -139,7 +139,6 @@ public:
     Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
     q << moveit::drake::getJointPositionVector(res.trajectory->getWayPoint(0), joint_model_group->getName(), plant);
     q << moveit::drake::getJointVelocityVector(res.trajectory->getWayPoint(0), joint_model_group->getName(), plant);
-    std::cout << "q: " << q.transpose() << std::endl;
     plant.SetPositionsAndVelocities(&plant_context, q);
 
     // Create drake::trajectories::Trajectory from moveit trajectory
