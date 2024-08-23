@@ -319,6 +319,11 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           RCLCPP_WARN(getLogger(), "Cone not supported in drake");
           break;
         }
+        case shapes::ShapeType::MESH:
+        {
+          RCLCPP_WARN(getLogger(), "Cone not supported in drake");
+          break;
+        }
         default:
         {
           RCLCPP_WARN(getLogger(), "Shape TYPE conversation to drake is not implemented");
