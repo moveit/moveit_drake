@@ -76,9 +76,6 @@ public:
   void clear() override;
 
   void setRobotDescription(std::string robot_description);
-  VectorXd toDrakePositions(const moveit::core::RobotState& state, const Joints& joints);
-  void setJointPositions(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
-  void setJointVelocities(const VectorXd& values, const Joints& joints, moveit::core::RobotState& state);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
 
 private:
