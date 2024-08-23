@@ -23,7 +23,6 @@ namespace
 {
 const rclcpp::Logger LOGGER = rclcpp::get_logger("pipeline_testbench");
 const std::string PLANNING_GROUP = "panda_arm";
-const std::vector<std::string> CONTROLLERS(1, "panda_arm_controller");
 const std::vector<std::string> SENSED_SCENE_NAMES = {
   "bookshelf_small_panda//scene_sensed0001.yaml", "bookshelf_tall_panda//scene_sensed0001.yaml",
   "bookshelf_thin_panda//scene_sensed0001.yaml",  "cage_panda//scene_sensed0001.yaml",
@@ -355,7 +354,7 @@ int main(int argc, char** argv)
 
   pipeline_testbench::Demo demo(node);
 
-  for (const auto& scene_name : ALL_SCENE_NAMES)
+  for (const auto& scene_name : SCENE_NAMES)
   {
     if (!demo.loadPlanningSceneAndQuery(scene_name))
     {

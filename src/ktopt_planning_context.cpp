@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include <moveit/drake/conversions.hpp>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
@@ -24,7 +25,7 @@ KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::s
   // Do some drake initialization may be
 }
 
-void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& res)
+void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& /*res*/)
 {
   RCLCPP_ERROR(getLogger(),
                "KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&) is not implemented!");
@@ -35,27 +36,23 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
   RCLCPP_INFO(getLogger(), "Setting up and solving optimization problem ...");
   // preliminary house keeping
-  const auto time_start = std::chrono::steady_clock::now();
   res.planner_id = std::string("ktopt");
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
   // dome drake related scope initialisations
   const auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
-  const auto& scene_graph = dynamic_cast<const SceneGraph<double>&>(diagram_->GetSubsystemByName("scene_graph"));
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
-  const auto group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
+  const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
-  const auto& joints = group->getActiveJointModels();
+  const auto& joints = joint_model_group->getActiveJointModels();
 
   // q represents the complete state (joint positions and velocities)
-  const auto q_p = toDrakePositions(start_state, joints);
-  VectorXd q_v = VectorXd::Zero(joints.size());
-  VectorXd q = VectorXd::Zero(2 * joints.size());
-  q << q_p;
-  q << q_v;
+  VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+  q << moveit::drake::getJointPositions(start_state, getGroupName(), plant);
+  q << moveit::drake::getJointVelocities(start_state, getGroupName(), plant);
 
   // drake accepts a VectorX<T>
   auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
@@ -88,11 +85,15 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Constraints
   // Add constraints on start joint configuration and velocity
-  trajopt.AddPathPositionConstraint(toDrakePositions(start_state, joints), toDrakePositions(start_state, joints), 0.0);
-  trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 0.0);
+  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositions(start_state, getGroupName(), plant),
+                                    moveit::drake::getJointPositions(start_state, getGroupName(), plant), 0.0);
+  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocities(start_state, getGroupName(), plant),
+                                    moveit::drake::getJointVelocities(start_state, getGroupName(), plant), 0.0);
   // Add constraint on end joint configuration and velocity
-  trajopt.AddPathPositionConstraint(toDrakePositions(goal_state, joints), toDrakePositions(goal_state, joints), 1.0);
-  trajopt.AddPathVelocityConstraint(VectorXd::Zero(joints.size()), VectorXd::Zero(joints.size()), 1.0);
+  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositions(goal_state, getGroupName(), plant),
+                                    moveit::drake::getJointPositions(goal_state, getGroupName(), plant), 1.0);
+  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocities(goal_state, getGroupName(), plant),
+                                    moveit::drake::getJointVelocities(goal_state, getGroupName(), plant), 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
@@ -132,33 +133,22 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // package up the resulting trajectory
   auto traj = trajopt.ReconstructTrajectory(collision_free_result);
-  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), group);
-  res.trajectory->clear();
-  const auto& active_joints = res.trajectory->getGroup() ? res.trajectory->getGroup()->getActiveJointModels() :
-                                                           res.trajectory->getRobotModel()->getActiveJointModels();
+  res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), joint_model_group);
 
-  // sanity check
-  assert(traj.rows() == active_joints.size());
+  moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, res.trajectory);
 
+  // Visualize the trajectory with Meshcat
   visualizer_->StartRecording();
   double t_prev = 0.0;
   const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
-  for (int i = 0; i < num_pts; ++i)
+  for (unsigned int i = 0; i < num_pts; ++i)
   {
     const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
     const auto t = std::min(t_scale, 1.0) * traj.end_time();
-    const auto pos_val = traj.value(t);
-    const auto vel_val = traj.EvalDerivative(t);
-    const auto waypoint = std::make_shared<moveit::core::RobotState>(start_state);
-    setJointPositions(pos_val, active_joints, *waypoint);
-    setJointVelocities(vel_val, active_joints, *waypoint);
-    res.trajectory->addSuffixWayPoint(waypoint, t - t_prev);
-    t_prev = t;
-
-    plant.SetPositions(&plant_context, pos_val);
+    plant.SetPositions(&plant_context, traj.value(t));
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
-
+    t_prev = t;
     // Without these sleeps, the visualizer won't give you time to load your browser
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
   }
@@ -192,7 +182,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
 
   // HACK: For now loading directly from drake's package map
   const char* ModelUrl = "package://drake_models/franka_description/"
-                         "urdf/panda_arm.urdf";
+                         "urdf/panda_arm_hand.urdf";
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
   auto robot_instance = Parser(&plant, &scene_graph).AddModels(urdf);
   plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
@@ -237,7 +227,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   {
     RCLCPP_ERROR_STREAM(getLogger(), "caught exception ... " << e.what());
   }
-  auto& plant = dynamic_cast<MultibodyPlant<double>&>(builder->GetMutableSubsystemByName("plant"));
   auto& scene_graph = dynamic_cast<SceneGraph<double>&>(builder->GetMutableSubsystemByName("scene_graph"));
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
@@ -252,12 +241,11 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       RCLCPP_WARN(getLogger(), "Octomap not supported for now ... ");
       continue;
     }
-    for (int i = 0; i < collision_object->shapes_.size(); ++i)
+    for (size_t i = 0; i < collision_object->shapes_.size(); ++i)
     {
       std::string shape_name = object + std::to_string(i);
       const auto& shape = collision_object->shapes_[i];
       const auto& pose = collision_object->pose_;
-      const auto& shape_pose = collision_object->shape_poses_[i];
       const auto& shape_type = collision_object->shapes_[i]->type;
 
       switch (shape_type)
@@ -328,36 +316,6 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       // TODO: Create and anchor ground entity
     }
   }
-}
-
-VectorXd KTOptPlanningContext::toDrakePositions(const moveit::core::RobotState& state, const Joints& joints)
-{
-  VectorXd q = VectorXd::Zero(joints.size());
-  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
-  {
-    q[joint_index] = *state.getJointPositions(joints[joint_index]);
-  }
-  return q;
-}
-
-void KTOptPlanningContext::setJointPositions(const VectorXd& values, const Joints& joints,
-                                             moveit::core::RobotState& state)
-{
-  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
-  {
-    state.setJointPositions(joints[joint_index], &values[joint_index]);
-  }
-  return;
-}
-
-void KTOptPlanningContext::setJointVelocities(const VectorXd& values, const Joints& joints,
-                                              moveit::core::RobotState& state)
-{
-  for (size_t joint_index = 0; joint_index < joints.size(); ++joint_index)
-  {
-    state.setJointVelocities(joints[joint_index], &values[joint_index]);
-  }
-  return;
 }
 
 void KTOptPlanningContext::clear()

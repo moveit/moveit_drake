@@ -43,9 +43,12 @@ include_directories(include)
 add_library(
   moveit_drake SHARED
   # KTOPT
-  src/ktopt_planner_manager.cpp src/ktopt_planning_context.cpp
+  src/ktopt_planner_manager.cpp
+  src/ktopt_planning_context.cpp
   # TOPPRA
-  src/add_toppra_time_parameterization.cpp)
+  src/add_toppra_time_parameterization.cpp
+  # Conversations
+  src/conversions.cpp)
 
 ament_target_dependencies(moveit_drake rclcpp pluginlib moveit_core moveit_msgs
                           EIGEN3)
