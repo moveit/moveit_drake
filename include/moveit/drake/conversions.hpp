@@ -79,9 +79,9 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
  * @param plant Drake Multibody Plant
  * @return Vector with drake joint positions
  */
-[[nodiscard]] Eigen::VectorXd getJointPositions(const moveit::core::RobotState& moveit_state,
-                                                const std::string& group_name,
-                                                const ::drake::multibody::MultibodyPlant<double>& plant);
+[[nodiscard]] Eigen::VectorXd getJointPositionVector(const moveit::core::RobotState& moveit_state,
+                                                     const std::string& group_name,
+                                                     const ::drake::multibody::MultibodyPlant<double>& plant);
 
 /**
  * @brief Get a joint velocities vector for a MultibodyPlant from a MoveIt robot state
@@ -91,7 +91,7 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
  * @param plant Drake Multibody Plant
  * @return Vector with drake joint velocities
  */
-[[nodiscard]] Eigen::VectorXd getJointVelocities(const moveit::core::RobotState& moveit_state,
-                                                 const std::string& group_name,
-                                                 const ::drake::multibody::MultibodyPlant<double>& plant);
+[[nodiscard]] Eigen::VectorXd getJointVelocityVector(const moveit::core::RobotState& moveit_state,
+                                                     const std::string& group_name,
+                                                     const ::drake::multibody::MultibodyPlant<double>& plant);
 }  // namespace moveit::drake

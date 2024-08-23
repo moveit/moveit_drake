@@ -51,8 +51,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
-  q << moveit::drake::getJointPositions(start_state, getGroupName(), plant);
-  q << moveit::drake::getJointVelocities(start_state, getGroupName(), plant);
+  q << moveit::drake::getJointPositionVector(start_state, getGroupName(), plant);
+  q << moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant);
 
   // drake accepts a VectorX<T>
   auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
@@ -85,15 +85,15 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Constraints
   // Add constraints on start joint configuration and velocity
-  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositions(start_state, getGroupName(), plant),
-                                    moveit::drake::getJointPositions(start_state, getGroupName(), plant), 0.0);
-  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocities(start_state, getGroupName(), plant),
-                                    moveit::drake::getJointVelocities(start_state, getGroupName(), plant), 0.0);
+  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositionVector(start_state, getGroupName(), plant),
+                                    moveit::drake::getJointPositionVector(start_state, getGroupName(), plant), 0.0);
+  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant),
+                                    moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant), 0.0);
   // Add constraint on end joint configuration and velocity
-  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositions(goal_state, getGroupName(), plant),
-                                    moveit::drake::getJointPositions(goal_state, getGroupName(), plant), 1.0);
-  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocities(goal_state, getGroupName(), plant),
-                                    moveit::drake::getJointVelocities(goal_state, getGroupName(), plant), 1.0);
+  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositionVector(goal_state, getGroupName(), plant),
+                                    moveit::drake::getJointPositionVector(goal_state, getGroupName(), plant), 1.0);
+  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant),
+                                    moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant), 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
