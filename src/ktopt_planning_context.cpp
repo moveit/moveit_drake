@@ -39,15 +39,14 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   res.planner_id = std::string("ktopt");
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
 
-  // dome drake related scope initialisations
-  const auto& plant = dynamic_cast<const MultibodyPlant<double>&>(diagram_->GetSubsystemByName("plant"));
+  // some drake related scope initialisations
+  const auto& plant = diagram_->GetDowncastSubsystemByName<MultibodyPlant<double>>("plant");
 
   // Retrieve motion plan request
   const auto& req = getMotionPlanRequest();
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
-  const auto& joints = joint_model_group->getActiveJointModels();
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -73,8 +72,10 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto& prog = trajopt.get_mutable_prog();
 
   // Costs
+  // TODO: These should be parameters
   trajopt.AddDurationCost(1.0);
   trajopt.AddPathLengthCost(1.0);
+
   // TODO: Adds quadratic cost
   // This acts as a secondary cost to push the solution towards joint centers
   // prog.AddQuadraticErrorCost(
@@ -85,15 +86,15 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Constraints
   // Add constraints on start joint configuration and velocity
-  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositionVector(start_state, getGroupName(), plant),
-                                    moveit::drake::getJointPositionVector(start_state, getGroupName(), plant), 0.0);
-  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant),
-                                    moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant), 0.0);
+  const auto& start_position = moveit::drake::getJointPositionVector(start_state, getGroupName(), plant);
+  trajopt.AddPathPositionConstraint(start_position, start_position, 0.0);
+  const auto& start_velocity = moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant);
+  trajopt.AddPathVelocityConstraint(start_velocity, start_velocity, 0.0);
   // Add constraint on end joint configuration and velocity
-  trajopt.AddPathPositionConstraint(moveit::drake::getJointPositionVector(goal_state, getGroupName(), plant),
-                                    moveit::drake::getJointPositionVector(goal_state, getGroupName(), plant), 1.0);
-  trajopt.AddPathVelocityConstraint(moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant),
-                                    moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant), 1.0);
+  const auto& goal_position = moveit::drake::getJointPositionVector(goal_state, getGroupName(), plant);
+  trajopt.AddPathPositionConstraint(goal_position, goal_position, 1.0);
+  const auto& goal_velocity = moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant);
+  trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
   // trajopt.AddPositionBounds(
@@ -104,6 +105,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   //     plant_->GetVelocityUpperLimits());
 
   // Add constraints on duration
+  // TODO: These should be parameters
   trajopt.AddDurationConstraint(0.5, 5);
 
   // solve the program
@@ -139,7 +141,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // Visualize the trajectory with Meshcat
   visualizer_->StartRecording();
-  double t_prev = 0.0;
   const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
   for (unsigned int i = 0; i < num_pts; ++i)
   {
@@ -148,8 +149,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     plant.SetPositions(&plant_context, traj.value(t));
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
-    t_prev = t;
     // Without these sleeps, the visualizer won't give you time to load your browser
+    // TODO: This should not hold up planning time
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
   }
   visualizer_->StopRecording();
@@ -227,7 +228,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   {
     RCLCPP_ERROR_STREAM(getLogger(), "caught exception ... " << e.what());
   }
-  auto& scene_graph = dynamic_cast<SceneGraph<double>&>(builder->GetMutableSubsystemByName("scene_graph"));
+  auto& scene_graph = builder->GetMutableDowncastSubsystemByName<SceneGraph<double>>("scene_graph");
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
@@ -243,27 +244,30 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
     }
     for (size_t i = 0; i < collision_object->shapes_.size(); ++i)
     {
-      std::string shape_name = object + std::to_string(i);
+      const std::string shape_name = object + std::to_string(i);
       const auto& shape = collision_object->shapes_[i];
       const auto& pose = collision_object->pose_;
       const auto& shape_type = collision_object->shapes_[i]->type;
 
+      std::unique_ptr<Shape> shape_ptr;
       switch (shape_type)
       {
         case shapes::ShapeType::BOX:
         {
-          const auto objectptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
-          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
-          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-              box_source_id,
-              std::make_unique<GeometryInstance>(
-                  RigidTransformd(pose),
-                  std::make_unique<Box>(objectptr->size[0], objectptr->size[1], objectptr->size[2]), shape_name));
-
-          // add illustration, proximity, perception properties
-          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
+          const auto object_ptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
+          shape_ptr = std::make_unique<Box>(object_ptr->size[0], object_ptr->size[1], object_ptr->size[2]);
+          break;
+        }
+        case shapes::ShapeType::SPHERE:
+        {
+          const auto object_ptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
+          shape_ptr = std::make_unique<Sphere>(object_ptr->radius);
+          break;
+        }
+        case shapes::ShapeType::CYLINDER:
+        {
+          const auto object_ptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
+          shape_ptr = std::make_unique<Cylinder>(object_ptr->radius, object_ptr->length);
           break;
         }
         case shapes::ShapeType::UNKNOWN_SHAPE:
@@ -271,47 +275,27 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           RCLCPP_WARN(getLogger(), "Unknown shape, ignoring in scene graph");
           break;
         }
-        case shapes::ShapeType::SPHERE:
-        {
-          const auto objectptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
-          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
-          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-              box_source_id, std::make_unique<GeometryInstance>(
-                                 RigidTransformd(pose), std::make_unique<Sphere>(objectptr->radius), shape_name));
-          RCLCPP_INFO(getLogger(), "Sphere");
-
-          // add illustration, proximity, perception properties
-          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
-          break;
-        }
-        case shapes::ShapeType::CYLINDER:
-        {
-          const auto objectptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
-          const SourceId box_source_id = scene_graph.RegisterSource(shape_name);
-          const GeometryId box_geom_id = scene_graph.RegisterAnchoredGeometry(
-              box_source_id,
-              std::make_unique<GeometryInstance>(
-                  RigidTransformd(pose), std::make_unique<Cylinder>(objectptr->radius, objectptr->length), shape_name));
-          RCLCPP_INFO(getLogger(), "Cylinder");
-
-          // add illustration, proximity, perception properties
-          scene_graph.AssignRole(box_source_id, box_geom_id, IllustrationProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, ProximityProperties());
-          scene_graph.AssignRole(box_source_id, box_geom_id, PerceptionProperties());
-          break;
-        }
-        case shapes::ShapeType::CONE:
-        {
-          RCLCPP_WARN(getLogger(), "Cone not supported in drake");
-          break;
-        }
         default:
         {
-          RCLCPP_WARN(getLogger(), "Shape TYPE conversation to drake is not implemented");
+          RCLCPP_WARN(getLogger(), "Shape TYPE conversion to drake is not implemented");
+          break;
         }
       }
+
+      if (!shape_ptr)
+      {
+        continue;
+      }
+
+      // Register the geometry in the scene graph.
+      const SourceId source_id = scene_graph.RegisterSource(shape_name);
+      const GeometryId geom_id = scene_graph.RegisterAnchoredGeometry(
+          source_id, std::make_unique<GeometryInstance>(RigidTransformd(pose), std::move(shape_ptr), shape_name));
+
+      // add illustration, proximity, perception properties
+      scene_graph.AssignRole(source_id, geom_id, IllustrationProperties());
+      scene_graph.AssignRole(source_id, geom_id, ProximityProperties());
+      scene_graph.AssignRole(source_id, geom_id, PerceptionProperties());
 
       // TODO: Create and anchor ground entity
     }
