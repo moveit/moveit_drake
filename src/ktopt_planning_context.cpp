@@ -270,14 +270,9 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
           shape_ptr = std::make_unique<Cylinder>(object_ptr->radius, object_ptr->length);
           break;
         }
-        case shapes::ShapeType::UNKNOWN_SHAPE:
-        {
-          RCLCPP_WARN(getLogger(), "Unknown shape, ignoring in scene graph");
-          break;
-        }
         default:
         {
-          RCLCPP_WARN(getLogger(), "Shape TYPE conversion to drake is not implemented");
+          RCLCPP_WARN(getLogger(), "Unsupported shape for '" + object_name + "', ignoring in scene graph.");
           break;
         }
       }
