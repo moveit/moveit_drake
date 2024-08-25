@@ -272,7 +272,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
         }
         default:
         {
-          RCLCPP_WARN(getLogger(), "Unsupported shape for '" + object_name + "', ignoring in scene graph.");
+          RCLCPP_WARN(getLogger(), "Unsupported shape for '%s', ignoring in scene graph.", shape_name.c_str());
           break;
         }
       }
