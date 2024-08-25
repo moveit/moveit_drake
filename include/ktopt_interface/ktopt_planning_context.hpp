@@ -43,6 +43,7 @@ using drake::geometry::PerceptionProperties;
 using drake::geometry::ProximityProperties;
 using drake::geometry::Role;
 using drake::geometry::SceneGraph;
+using drake::geometry::Shape;
 using drake::geometry::SourceId;
 using drake::geometry::Sphere;
 using drake::math::RigidTransformd;
