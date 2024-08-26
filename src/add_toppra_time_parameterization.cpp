@@ -91,7 +91,7 @@ public:
 
     // TODO(sjahr) Replace with subscribed robot description
     const char* ModelUrl = "package://drake_models/franka_description/"
-                           "urdf/panda_arm_hand.urdf";
+                           "urdf/panda_arm.urdf";
     const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
     Parser(&plant, &scene_graph).AddModels(urdf);
     plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
