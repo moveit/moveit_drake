@@ -182,8 +182,9 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
   // HACK: For now loading directly from drake's package map
-  const char* ModelUrl = "package://drake_models/franka_description/"
-                         "urdf/panda_arm_hand.urdf";
+  // const char* ModelUrl = "package://drake_models/franka_description/"
+  //                        "urdf/panda_arm_hand.urdf";
+  const char* ModelUrl = params_.drake_robot_description.c_str();
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
   auto robot_instance = Parser(&plant, &scene_graph).AddModels(urdf);
   plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
