@@ -53,10 +53,10 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   std::vector<double> upper_position_bounds;
   std::vector<double> lower_velocity_bounds;
   std::vector<double> upper_velocity_bounds;
-  for (const auto &joint_model : joint_model_group->getActiveJointModels()) {
-    const std::string &joint_name = joint_model->getName();
-    const moveit::core::VariableBounds &bounds =
-        joint_model->getVariableBounds()[0];
+  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  {
+    const std::string& joint_name = joint_model->getName();
+    const moveit::core::VariableBounds& bounds = joint_model->getVariableBounds()[0];
 
     lower_position_bounds.push_back(bounds.min_position_);
     upper_position_bounds.push_back(bounds.max_position_);
@@ -69,32 +69,28 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     //           << bounds.max_velocity_ << "]" << std::endl;
   }
   int num_positions = plant.num_positions();
-  int num_velocities = plant.num_velocities(); 
+  int num_velocities = plant.num_velocities();
 
   // Ensure the bounds have the correct size
-  if (lower_position_bounds.size() != num_positions ||
-      upper_position_bounds.size() != num_positions) {
-    lower_position_bounds.resize(num_positions,
-                                 -1e6);
-    upper_position_bounds.resize(num_positions,
-                                 1e6);
+  if (lower_position_bounds.size() != num_positions || upper_position_bounds.size() != num_positions)
+  {
+    lower_position_bounds.resize(num_positions, -1e6);
+    upper_position_bounds.resize(num_positions, 1e6);
   }
-  if (lower_velocity_bounds.size() != num_velocities ||
-      upper_velocity_bounds.size() != num_velocities) {
+  if (lower_velocity_bounds.size() != num_velocities || upper_velocity_bounds.size() != num_velocities)
+  {
     // Resize velocity bounds to match number of velocities, if necessary
-    lower_velocity_bounds.resize(num_velocities,
-                                 -1e6);
-    upper_velocity_bounds.resize(num_velocities,
-                                 1e6);
+    lower_velocity_bounds.resize(num_velocities, -1e6);
+    upper_velocity_bounds.resize(num_velocities, 1e6);
   }
-  Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(
-      lower_position_bounds.data(), lower_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(
-      upper_position_bounds.data(), upper_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_velocity_bounds_eigen(
-      lower_velocity_bounds.data(), lower_velocity_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(
-      upper_velocity_bounds.data(), upper_velocity_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
+                                                                lower_position_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
+                                                                upper_position_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_velocity_bounds_eigen(lower_velocity_bounds.data(),
+                                                                lower_velocity_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(upper_velocity_bounds.data(),
+                                                                upper_velocity_bounds.size());
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -145,12 +141,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
-  trajopt.AddPositionBounds(
-    lower_position_bounds_eigen,
-    upper_position_bounds_eigen);
-  trajopt.AddVelocityBounds(
-      lower_velocity_bounds_eigen,
-      upper_velocity_bounds_eigen);
+  trajopt.AddPositionBounds(lower_position_bounds_eigen, upper_position_bounds_eigen);
+  trajopt.AddVelocityBounds(lower_velocity_bounds_eigen, upper_velocity_bounds_eigen);
 
   // Add constraints on duration
   // TODO: These should be parameters
