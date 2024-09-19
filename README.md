@@ -1,10 +1,18 @@
 # Experimental MoveIt 2 - Drake Integration
 
+NOTE: Experimental and will continue to have breaking changes until first
+release.
+
 `moveit_drake` brings together the vertical ROS integration of the
 [MoveIt2](https://moveit.ai/) motion planning framework, with the Mathematical
 Programming interface within [drake](https://drake.mit.edu/). This allows the
 user to setup motion planning as an optimization problem within ROS, with the
 rich specification of constraints and costs provided by `drake`.
+
+## Features
+
+- Exposes `KinematicTrajectoryOptimization` implementation in `drake`.
+- Exposes `TOPPRA` implementation in `drake`.
 
 ## Docker Workflow (Preferred and tested)
 
