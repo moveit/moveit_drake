@@ -11,8 +11,10 @@ rich specification of constraints and costs provided by `drake`.
 
 ## Features
 
-- Exposes `KinematicTrajectoryOptimization` implementation in `drake`.
-- Exposes `TOPPRA` implementation in `drake`.
+- Exposes
+  [`KinematicTrajectoryOptimization`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_kinematic_trajectory_optimization.html)
+  implementation in `drake`.
+- Exposes [`TOPPRA`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html) implementation in `drake`.
 
 ## Docker Workflow (Preferred and tested)
 

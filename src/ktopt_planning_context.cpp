@@ -63,13 +63,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     lower_velocity_bounds.push_back(-bounds.max_velocity_);
     upper_velocity_bounds.push_back(bounds.max_velocity_);
 
-    // std::cout << "Joint " << joint_name << ": Position ["
-    //           << bounds.min_position_ << ", " << bounds.max_position_
-    //           << "], Velocity [-" << bounds.max_velocity_ << ", "
-    //           << bounds.max_velocity_ << "]" << std::endl;
   }
-  int num_positions = plant.num_positions();
-  int num_velocities = plant.num_velocities();
+  const int num_positions = plant.num_positions();
+  const int num_velocities = plant.num_velocities();
 
   // Ensure the bounds have the correct size
   if (lower_position_bounds.size() != num_positions || upper_position_bounds.size() != num_positions)
