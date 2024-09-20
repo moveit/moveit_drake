@@ -62,7 +62,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     upper_position_bounds.push_back(bounds.max_position_);
     lower_velocity_bounds.push_back(-bounds.max_velocity_);
     upper_velocity_bounds.push_back(bounds.max_velocity_);
-
   }
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
