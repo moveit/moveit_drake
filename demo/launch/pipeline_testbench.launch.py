@@ -56,8 +56,8 @@ def launch_setup(context, *args, **kwargs):
 
     # Warehouse config
     sqlite_database = os.path.join(
-        get_package_share_directory("moveit_benchmark_resources"),
-        "databases",
+        get_package_share_directory("moveit_drake"),
+        "config",
         "panda_benchmarks.sqlite",
     )
 
