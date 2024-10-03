@@ -96,8 +96,8 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
   }
 }
 
-[[nodiscard]] Eigen::VectorXd getJointPositions(const moveit::core::RobotState& moveit_state,
-                                                const std::string& group_name, const MultibodyPlant<double>& plant)
+[[nodiscard]] Eigen::VectorXd getJointPositionVector(const moveit::core::RobotState& moveit_state,
+                                                     const std::string& group_name, const MultibodyPlant<double>& plant)
 {
   Eigen::VectorXd joint_positions = Eigen::VectorXd::Zero(plant.num_positions());
 
@@ -111,8 +111,8 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
   return joint_positions;
 }
 
-[[nodiscard]] Eigen::VectorXd getJointVelocities(const moveit::core::RobotState& moveit_state,
-                                                 const std::string& group_name, const MultibodyPlant<double>& plant)
+[[nodiscard]] Eigen::VectorXd getJointVelocityVector(const moveit::core::RobotState& moveit_state,
+                                                     const std::string& group_name, const MultibodyPlant<double>& plant)
 {
   Eigen::VectorXd joint_velocities = Eigen::VectorXd::Zero(plant.num_velocities());
   const auto& joint_model_group = moveit_state.getRobotModel()->getJointModelGroup(group_name);

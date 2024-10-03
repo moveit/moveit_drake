@@ -47,7 +47,7 @@ add_library(
   src/ktopt_planning_context.cpp
   # TOPPRA
   src/add_toppra_time_parameterization.cpp
-  # Conversations
+  # Conversions
   src/conversions.cpp)
 
 ament_target_dependencies(moveit_drake rclcpp pluginlib moveit_core moveit_msgs
