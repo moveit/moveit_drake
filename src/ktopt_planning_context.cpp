@@ -137,7 +137,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto traj = trajopt.ReconstructTrajectory(collision_free_result);
   res.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(start_state.getRobotModel(), joint_model_group);
 
-  moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, res.trajectory);
+  moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, plant, res.trajectory);
 
   // Visualize the trajectory with Meshcat
   visualizer_->StartRecording();
