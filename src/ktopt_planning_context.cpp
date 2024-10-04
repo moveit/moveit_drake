@@ -16,6 +16,9 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
+
+constexpr double kDefaultJointMaxPosition = 1.0e6;
+
 }  // namespace
 
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
@@ -47,6 +50,74 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
+  const int num_positions = plant.num_positions();
+  const int num_velocities = plant.num_velocities();
+
+  // extract position and velocity bounds
+  std::vector<double> lower_position_bounds;
+  std::vector<double> upper_position_bounds;
+  std::vector<double> lower_velocity_bounds;
+  std::vector<double> upper_velocity_bounds;
+  std::vector<double> lower_acceleration_bounds;
+  std::vector<double> upper_acceleration_bounds;
+  std::vector<double> lower_jerk_bounds;
+  std::vector<double> upper_jerk_bounds;
+  lower_position_bounds.reserve(num_positions);
+  upper_position_bounds.reserve(num_positions);
+  lower_velocity_bounds.reserve(num_positions);
+  upper_velocity_bounds.reserve(num_positions);
+  lower_acceleration_bounds.reserve(num_positions);
+  upper_acceleration_bounds.reserve(num_positions);
+  lower_jerk_bounds.reserve(num_positions);
+  upper_jerk_bounds.reserve(num_positions);
+
+  const auto& all_joint_models = joint_model_group->getJointModels();
+  for (const auto& joint_model : all_joint_models)
+  {
+    const auto& joint_name = joint_model->getName();
+    const bool is_active = joint_model_group->hasJointModel(joint_name);
+
+    if (is_active)
+    {
+      // Set bounds for active joints
+      const auto& bounds = joint_model->getVariableBounds()[0];
+      lower_position_bounds.push_back(bounds.min_position_);
+      upper_position_bounds.push_back(bounds.max_position_);
+      lower_velocity_bounds.push_back(-bounds.max_velocity_);
+      upper_velocity_bounds.push_back(bounds.max_velocity_);
+      lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
+      upper_acceleration_bounds.push_back(bounds.max_acceleration_);
+      lower_jerk_bounds.push_back(-params_.joint_jerk_bound);
+      upper_jerk_bounds.push_back(params_.joint_jerk_bound);
+    }
+    else
+    {
+      // Set default values for inactive joints
+      lower_position_bounds.push_back(-kDefaultJointMaxPosition);
+      upper_position_bounds.push_back(kDefaultJointMaxPosition);
+      lower_velocity_bounds.push_back(0.0);
+      upper_velocity_bounds.push_back(0.0);
+      lower_acceleration_bounds.push_back(0.0);
+      upper_acceleration_bounds.push_back(0.0);
+      lower_jerk_bounds.push_back(0.0);
+      upper_jerk_bounds.push_back(0.0);
+    }
+  }
+
+  Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
+                                                                lower_position_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
+                                                                upper_position_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_velocity_bounds_eigen(lower_velocity_bounds.data(),
+                                                                lower_velocity_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(upper_velocity_bounds.data(),
+                                                                upper_velocity_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_acceleration_bounds_eigen(lower_acceleration_bounds.data(),
+                                                                    lower_acceleration_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_acceleration_bounds_eigen(upper_acceleration_bounds.data(),
+                                                                    upper_acceleration_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_jerk_bounds_eigen(lower_jerk_bounds.data(), lower_jerk_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_jerk_bounds_eigen(upper_jerk_bounds.data(), upper_jerk_bounds.size());
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -97,12 +168,10 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
-  // trajopt.AddPositionBounds(
-  //     plant_->GetPositionLowerLimits(),
-  //     plant_->GetPositionUpperLimits());
-  // trajopt.AddVelocityBounds(
-  //     plant_->GetVelocityLowerLimits(),
-  //     plant_->GetVelocityUpperLimits());
+  trajopt.AddPositionBounds(lower_position_bounds_eigen, upper_position_bounds_eigen);
+  trajopt.AddVelocityBounds(lower_velocity_bounds_eigen, upper_velocity_bounds_eigen);
+  trajopt.AddAccelerationBounds(lower_acceleration_bounds_eigen, upper_acceleration_bounds_eigen);
+  trajopt.AddJerkBounds(lower_jerk_bounds_eigen, upper_jerk_bounds_eigen);
 
   // Add constraints on duration
   // TODO: These should be parameters
@@ -181,9 +250,7 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   // TODO:(kamiradi) Figure out object parsing
   // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
-  // HACK: For now loading directly from drake's package map
-  const char* ModelUrl = "package://drake_models/franka_description/"
-                         "urdf/panda_arm_hand.urdf";
+  const char* ModelUrl = params_.drake_robot_description.c_str();
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
   auto robot_instance = Parser(&plant, &scene_graph).AddModels(urdf);
   plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
