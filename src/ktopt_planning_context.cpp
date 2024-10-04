@@ -60,44 +60,50 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   std::vector<double> upper_velocity_bounds;
   std::vector<double> lower_acceleration_bounds;
   std::vector<double> upper_acceleration_bounds;
+  std::vector<double> lower_jerk_bounds;
+  std::vector<double> upper_jerk_bounds;
   lower_position_bounds.reserve(num_positions);
   upper_position_bounds.reserve(num_positions);
   lower_velocity_bounds.reserve(num_positions);
   upper_velocity_bounds.reserve(num_positions);
   lower_acceleration_bounds.reserve(num_positions);
   upper_acceleration_bounds.reserve(num_positions);
+  lower_jerk_bounds.reserve(num_positions);
+  upper_jerk_bounds.reserve(num_positions);
 
-  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  const auto& all_joint_models = joint_model_group->getJointModels();
+  for (const auto& joint_model : all_joint_models)
   {
     const auto& joint_name = joint_model->getName();
-    const auto& bounds = joint_model->getVariableBounds()[0];
+    const bool is_active = joint_model_group->hasJointModel(joint_name);
 
-    lower_position_bounds.push_back(bounds.min_position_);
-    upper_position_bounds.push_back(bounds.max_position_);
-    lower_velocity_bounds.push_back(-bounds.max_velocity_);
-    upper_velocity_bounds.push_back(bounds.max_velocity_);
-    lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
-    upper_acceleration_bounds.push_back(bounds.max_acceleration_);
+    if (is_active)
+    {
+      // Set bounds for active joints
+      const auto& bounds = joint_model->getVariableBounds()[0];
+      lower_position_bounds.push_back(bounds.min_position_);
+      upper_position_bounds.push_back(bounds.max_position_);
+      lower_velocity_bounds.push_back(-bounds.max_velocity_);
+      upper_velocity_bounds.push_back(bounds.max_velocity_);
+      lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
+      upper_acceleration_bounds.push_back(bounds.max_acceleration_);
+      lower_jerk_bounds.push_back(-params_.joint_jerk_bound);
+      upper_jerk_bounds.push_back(params_.joint_jerk_bound);
+    }
+    else
+    {
+      // Set default values for inactive joints
+      lower_position_bounds.push_back(-kDefaultJointMaxPosition);
+      upper_position_bounds.push_back(kDefaultJointMaxPosition);
+      lower_velocity_bounds.push_back(0.0);
+      upper_velocity_bounds.push_back(0.0);
+      lower_acceleration_bounds.push_back(0.0);
+      upper_acceleration_bounds.push_back(0.0);
+      lower_jerk_bounds.push_back(0.0);
+      upper_jerk_bounds.push_back(0.0);
+    }
   }
 
-  // Ensure the bounds have the correct size
-  if (lower_position_bounds.size() != num_positions || upper_position_bounds.size() != num_positions)
-  {
-    lower_position_bounds.resize(num_positions, -kDefaultJointMaxPosition);
-    upper_position_bounds.resize(num_positions, kDefaultJointMaxPosition);
-  }
-  if (lower_velocity_bounds.size() != num_velocities || upper_velocity_bounds.size() != num_velocities)
-  {
-    // Resize velocity bounds to match number of velocities, if necessary
-    lower_velocity_bounds.resize(num_velocities, -kDefaultJointMaxPosition);
-    upper_velocity_bounds.resize(num_velocities, kDefaultJointMaxPosition);
-  }
-  if (lower_acceleration_bounds.size() != num_velocities || upper_acceleration_bounds.size() != num_velocities)
-  {
-    // Resize velocity bounds to match number of velocities, if necessary
-    lower_acceleration_bounds.resize(num_velocities, -kDefaultJointMaxPosition);
-    upper_acceleration_bounds.resize(num_velocities, kDefaultJointMaxPosition);
-  }
   Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
                                                                 lower_position_bounds.size());
   Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
@@ -110,9 +116,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
                                                                     lower_acceleration_bounds.size());
   Eigen::Map<const Eigen::VectorXd> upper_acceleration_bounds_eigen(upper_acceleration_bounds.data(),
                                                                     upper_acceleration_bounds.size());
-
-  Eigen::VectorXd lower_jerk_bounds_eigen = Eigen::VectorXd::Constant(num_velocities, -1 * params_.joint_jerk_bound);
-  Eigen::VectorXd upper_jerk_bounds_eigen = Eigen::VectorXd::Constant(num_velocities, params_.joint_jerk_bound);
+  Eigen::Map<const Eigen::VectorXd> lower_jerk_bounds_eigen(lower_jerk_bounds.data(), lower_jerk_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_jerk_bounds_eigen(upper_jerk_bounds.data(), upper_jerk_bounds.size());
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
