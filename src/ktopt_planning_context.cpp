@@ -16,6 +16,9 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
+
+constexpr double kDefaultJointMaxPosition = 1.0e6;
+
 }  // namespace
 
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
@@ -47,6 +50,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
+  const int num_positions = plant.num_positions();
+  const int num_velocities = plant.num_velocities();
 
   // extract position and velocity bounds
   std::vector<double> lower_position_bounds;
@@ -55,10 +60,17 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   std::vector<double> upper_velocity_bounds;
   std::vector<double> lower_acceleration_bounds;
   std::vector<double> upper_acceleration_bounds;
+  lower_position_bounds.reserve(num_positions);
+  upper_position_bounds.reserve(num_positions);
+  lower_velocity_bounds.reserve(num_positions);
+  upper_velocity_bounds.reserve(num_positions);
+  lower_acceleration_bounds.reserve(num_positions);
+  upper_acceleration_bounds.reserve(num_positions);
+
   for (const auto& joint_model : joint_model_group->getActiveJointModels())
   {
-    const std::string& joint_name = joint_model->getName();
-    const moveit::core::VariableBounds& bounds = joint_model->getVariableBounds()[0];
+    const auto& joint_name = joint_model->getName();
+    const auto& bounds = joint_model->getVariableBounds()[0];
 
     lower_position_bounds.push_back(bounds.min_position_);
     upper_position_bounds.push_back(bounds.max_position_);
@@ -67,26 +79,24 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
     upper_acceleration_bounds.push_back(bounds.max_acceleration_);
   }
-  const int num_positions = plant.num_positions();
-  const int num_velocities = plant.num_velocities();
 
   // Ensure the bounds have the correct size
   if (lower_position_bounds.size() != num_positions || upper_position_bounds.size() != num_positions)
   {
-    lower_position_bounds.resize(num_positions, -1e6);
-    upper_position_bounds.resize(num_positions, 1e6);
+    lower_position_bounds.resize(num_positions, -kDefaultJointMaxPosition);
+    upper_position_bounds.resize(num_positions, kDefaultJointMaxPosition);
   }
   if (lower_velocity_bounds.size() != num_velocities || upper_velocity_bounds.size() != num_velocities)
   {
     // Resize velocity bounds to match number of velocities, if necessary
-    lower_velocity_bounds.resize(num_velocities, -1e6);
-    upper_velocity_bounds.resize(num_velocities, 1e6);
+    lower_velocity_bounds.resize(num_velocities, -kDefaultJointMaxPosition);
+    upper_velocity_bounds.resize(num_velocities, kDefaultJointMaxPosition);
   }
   if (lower_acceleration_bounds.size() != num_velocities || upper_acceleration_bounds.size() != num_velocities)
   {
     // Resize velocity bounds to match number of velocities, if necessary
-    lower_acceleration_bounds.resize(num_velocities, -1e6);
-    upper_acceleration_bounds.resize(num_velocities, 1e6);
+    lower_acceleration_bounds.resize(num_velocities, -kDefaultJointMaxPosition);
+    upper_acceleration_bounds.resize(num_velocities, kDefaultJointMaxPosition);
   }
   Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
                                                                 lower_position_bounds.size());

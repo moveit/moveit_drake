@@ -4,8 +4,8 @@ NOTE: Experimental and will continue to have breaking changes until first
 release.
 
 `moveit_drake` brings together the vertical ROS integration of the
-[MoveIt2](https://moveit.ai/) motion planning framework, with the Mathematical
-Programming interface within [drake](https://drake.mit.edu/). This allows the
+[MoveIt 2](https://moveit.ai/) motion planning framework, with the Mathematical
+Programming interface within [Drake](https://drake.mit.edu/). This allows the
 user to setup motion planning as an optimization problem within ROS, with the
 rich specification of constraints and costs provided by `drake`.
 
@@ -77,6 +77,9 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 
 - Use [pre-commit to format your
   code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
+
+    # inside the moveit_drake package
+    pre-commit run -a
 
 ### Some helper commands
 To just rebuild `moveit_drake`
