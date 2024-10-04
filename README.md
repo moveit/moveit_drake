@@ -1,11 +1,26 @@
 # Experimental MoveIt 2 - Drake Integration
 
-Under construction
+NOTE: Experimental and will continue to have breaking changes until first
+release.
+
+`moveit_drake` brings together the vertical ROS integration of the
+[MoveIt 2](https://moveit.ai/) motion planning framework, with the Mathematical
+Programming interface within [Drake](https://drake.mit.edu/). This allows the
+user to setup motion planning as an optimization problem within ROS, with the
+rich specification of constraints and costs provided by `drake`.
+
+## Features
+
+- Exposes
+  [`KinematicTrajectoryOptimization`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_kinematic_trajectory_optimization.html)
+  implementation in `drake`.
+- Exposes [`TOPPRA`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html) implementation in `drake`.
 
 ## Docker Workflow (Preferred and tested)
 
 ### Requirements
-`docker` and `docker-compose` - Follow instructions [here](https://docs.docker.com/engine/install/ubuntu/).
+`docker` and `docker-compose` - Follow instructions
+[here](https://docs.docker.com/engine/install/ubuntu/).
 
 ### Steps
 The following steps clone and build the base image that you will require to
@@ -33,7 +48,9 @@ Follow [instructions](#build-moveit_drake) below to build `moveit_drake`
 
 ### Build `moveit_drake`
 
-Follow the [MoveIt Source Build](https://moveit.ros.org/install-moveit2/source/) instructions to set up a colcon workspace with MoveIt from source.
+Follow the [MoveIt Source
+Build](https://moveit.ros.org/install-moveit2/source/) instructions to set up a
+colcon workspace with MoveIt from source.
 
 Open a command line to your colcon workspace:
 
@@ -58,28 +75,11 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 
 ### Development
 
-- Use [pre-commit to format your code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
+- Use [pre-commit to format your
+  code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
 
-# Todo section
-
-This section keeps a list of immediate todos, will be deleted before repo release
-
-- [x] Create drake planning pipeline option in `pipeline_testbench.launch.py`
-- [x] Declare to moveit, to use the drake ktopt planning pipeline
-- [ ] Build planner manager and planning context to display info from `moveit`
-  and `drake` instance.
-    - [ ] Generated placeholder classes mimicking `stomp` implementation.
-    - [ ] Display info messages during testbench runtime.
-    - [ ]
-- [ ] read Robot description and display onto drake visualizer
-
-### Doubts
-- [x] stomp_moveit::ParamListener, where is this being declared
-- [ ] Why is the parameter file in the "res" directory
-
-### Potential issues
-- Assumes that planner managers initialize will set robot description before a
-  call to getPlanningContext.
+    # inside the moveit_drake package
+    pre-commit run -a
 
 ### Some helper commands
 To just rebuild `moveit_drake`
