@@ -44,3 +44,11 @@ ktopt_interface:
       gt_eq<>: [0.0]
     }
   }
+  joint_jerk_bound: {
+    type: double,
+    description: "Maximum jerk that is allowed for generated trajectory",
+    default_value: 1.0,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }

@@ -53,6 +53,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   std::vector<double> upper_position_bounds;
   std::vector<double> lower_velocity_bounds;
   std::vector<double> upper_velocity_bounds;
+  std::vector<double> lower_acceleration_bounds;
+  std::vector<double> upper_acceleration_bounds;
   for (const auto& joint_model : joint_model_group->getActiveJointModels())
   {
     const std::string& joint_name = joint_model->getName();
@@ -62,6 +64,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     upper_position_bounds.push_back(bounds.max_position_);
     lower_velocity_bounds.push_back(-bounds.max_velocity_);
     upper_velocity_bounds.push_back(bounds.max_velocity_);
+    lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
+    upper_acceleration_bounds.push_back(bounds.max_acceleration_);
   }
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
@@ -78,6 +82,12 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     lower_velocity_bounds.resize(num_velocities, -1e6);
     upper_velocity_bounds.resize(num_velocities, 1e6);
   }
+  if (lower_acceleration_bounds.size() != num_velocities || upper_acceleration_bounds.size() != num_velocities)
+  {
+    // Resize velocity bounds to match number of velocities, if necessary
+    lower_acceleration_bounds.resize(num_velocities, -1e6);
+    upper_acceleration_bounds.resize(num_velocities, 1e6);
+  }
   Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
                                                                 lower_position_bounds.size());
   Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
@@ -86,6 +96,13 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
                                                                 lower_velocity_bounds.size());
   Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(upper_velocity_bounds.data(),
                                                                 upper_velocity_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> lower_acceleration_bounds_eigen(lower_acceleration_bounds.data(),
+                                                                    lower_acceleration_bounds.size());
+  Eigen::Map<const Eigen::VectorXd> upper_acceleration_bounds_eigen(upper_acceleration_bounds.data(),
+                                                                    upper_acceleration_bounds.size());
+
+  Eigen::VectorXd lower_jerk_bounds_eigen = Eigen::VectorXd::Constant(num_velocities, -1 * params_.joint_jerk_bound);
+  Eigen::VectorXd upper_jerk_bounds_eigen = Eigen::VectorXd::Constant(num_velocities, params_.joint_jerk_bound);
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -138,6 +155,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // TODO: Add constraints on joint position/velocity/acceleration
   trajopt.AddPositionBounds(lower_position_bounds_eigen, upper_position_bounds_eigen);
   trajopt.AddVelocityBounds(lower_velocity_bounds_eigen, upper_velocity_bounds_eigen);
+  trajopt.AddAccelerationBounds(lower_acceleration_bounds_eigen, upper_acceleration_bounds_eigen);
+  trajopt.AddJerkBounds(lower_jerk_bounds_eigen, upper_jerk_bounds_eigen);
 
   // Add constraints on duration
   // TODO: These should be parameters
