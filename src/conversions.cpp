@@ -57,7 +57,6 @@ using ::drake::systems::DiagramBuilder;
     const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
     joint_positions(joint_index) = moveit_state.getVariablePosition(joint_name);
   }
-  std::cout << "Joint positions: " << joint_positions.transpose() << std::endl;
   return joint_positions;
 }
 
@@ -73,7 +72,6 @@ using ::drake::systems::DiagramBuilder;
     const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
     joint_velocities(joint_index) = moveit_state.getVariableVelocity(joint_name);
   }
-  std::cout << "Joint velocities: " << joint_velocities.transpose() << std::endl;
   return joint_velocities;
 }
 
@@ -165,7 +163,6 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
     const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
     const auto t = std::min(t_scale, 1.0) * drake_trajectory.end_time();
     const auto pos_val = drake_trajectory.value(t);
-    std::cout << "pos_val size: " << pos_val.size() << std::endl;
     const auto vel_val = drake_trajectory.EvalDerivative(t);
     const auto waypoint = std::make_shared<moveit::core::RobotState>(moveit_trajectory->getRobotModel());
     for (const auto& joint_model : active_joints)

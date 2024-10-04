@@ -156,8 +156,10 @@ public:
     auto& plant = diagram_->GetDowncastSubsystemByName<MultibodyPlant<double>>("plant");
     auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
     Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
-    Eigen::VectorXd joint_positions = moveit::drake::getJointPositionVector(res.trajectory->getFirstWayPoint(), joint_model_group->getName(), plant);
-    Eigen::VectorXd joint_velocities = moveit::drake::getJointVelocityVector(res.trajectory->getFirstWayPoint(), joint_model_group->getName(), plant);
+    Eigen::VectorXd joint_positions =
+        moveit::drake::getJointPositionVector(res.trajectory->getFirstWayPoint(), joint_model_group->getName(), plant);
+    Eigen::VectorXd joint_velocities =
+        moveit::drake::getJointVelocityVector(res.trajectory->getFirstWayPoint(), joint_model_group->getName(), plant);
     q << joint_positions, joint_velocities;
     plant.SetPositionsAndVelocities(&plant_context, q);
 
