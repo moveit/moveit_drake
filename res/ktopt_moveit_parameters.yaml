@@ -4,6 +4,11 @@ ktopt_interface:
     description: "Robot description to be loaded by the internal Drake MultibodyPlant",
     default_value: "package://drake_models/franka_description/urdf/panda_arm_hand.urdf",
   }
+  link_ee: {
+    type: string,
+    description: "Name of the end-effector frame as per urdf/sdf",
+    default_value: "panda_hand"
+  }
   num_iterations: {
     type: int,
     description: "Number of iterations for the Drake mathematical program solver.",
