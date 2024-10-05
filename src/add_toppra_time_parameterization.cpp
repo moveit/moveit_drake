@@ -47,6 +47,7 @@
 #include <drake/systems/framework/diagram_builder.h>
 #include <drake/multibody/plant/multibody_plant.h>
 #include <drake/multibody/optimization/toppra.h>
+#include <drake/common/trajectories/path_parameterized_trajectory.h>
 
 /* Visualization */
 #include "drake/geometry/meshcat.h"
@@ -67,6 +68,7 @@ using ::drake::multibody::Toppra;
 using ::drake::systems::Context;
 using ::drake::systems::Diagram;
 using ::drake::systems::DiagramBuilder;
+using ::drake::trajectories::PathParameterizedTrajectory;
 
 using ::drake::geometry::Meshcat;
 using ::drake::geometry::MeshcatParams;
@@ -150,9 +152,7 @@ public:
       return;
     }
 
-    /////////////////////////////////////
-    // Update plan from planning scene //
-    /////////////////////////////////////
+    // Update plan from planning scene
     auto& plant = diagram_->GetDowncastSubsystemByName<MultibodyPlant<double>>("plant");
     auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
     Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -163,12 +163,18 @@ public:
     q << joint_positions, joint_velocities;
     plant.SetPositionsAndVelocities(&plant_context, q);
 
+    // Set initial time profile guess (0.1s between each waypoint)
+    for (std::size_t i = 1; i < res.trajectory->getWayPointCount(); ++i)
+    {
+      res.trajectory->setWayPointDurationFromPrevious(i, 0.1);
+    }
     // Create drake::trajectories::Trajectory from moveit trajectory
-    auto input_trajectory = getPiecewisePolynomial(*res.trajectory, joint_model_group, plant);
+    auto input_path = getPiecewisePolynomial(*res.trajectory, joint_model_group, plant);
 
+    input_path.end_time(input_path.end_time() * 2);
     // Run toppra
-    const auto grid_points = Toppra::CalcGridPoints(input_trajectory, CalcGridPointsOptions());
-    auto toppra = Toppra(input_trajectory, plant, grid_points);
+    const auto grid_points = Toppra::CalcGridPoints(input_path, CalcGridPointsOptions());
+    auto toppra = Toppra(input_path, plant, grid_points);
 
     // Get velocity and acceleration bounds
     Eigen::VectorXd lower_velocity_limits;
@@ -181,41 +187,45 @@ public:
 
     toppra.AddJointVelocityLimit(lower_velocity_limits, upper_velocity_limits);
     toppra.AddJointAccelerationLimit(lower_acceleration_limits, upper_acceleration_limits);
-    auto optimized_trajectory = toppra.SolvePathParameterization();
+    auto time_optimized_path_parameterization = toppra.SolvePathParameterization();
 
-    if (!optimized_trajectory.has_value())
+    if (!time_optimized_path_parameterization.has_value())
     {
       RCLCPP_ERROR_STREAM(getLogger(), "Failed to calculate a trajectory with toppra");
       res.error_code = moveit::core::MoveItErrorCode::FAILURE;
       return;
     }
 
-    //getRobotTrajectory(optimized_trajectory.value(),
-    //                   optimized_trajectory.value().end_time() /
-    //                       res.trajectory->getWayPointCount() /* TODO enable down sampling */,
-    //                   plant, res.trajectory /* override previous solution with optimal trajectory*/);
+    // create optimized trajectory
+    auto optimized_trajectory =
+        PathParameterizedTrajectory<double>(input_path, time_optimized_path_parameterization.value());
+
+    // Transfer optimized trajectory back to moveit trajectory
+    getRobotTrajectory(optimized_trajectory,
+                       optimized_trajectory.end_time() /
+                           res.trajectory->getWayPointCount() /* TODO enable down sampling */,
+                       plant, res.trajectory /* override previous solution with optimal trajectory*/);
 
     // meshcat experiment
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
 
-    // Visualize the trajectory with Meshcat
-    visualizer_->StartRecording();
-    const auto num_pts = res.trajectory->getWayPointCount();
-    RCLCPP_INFO_STREAM(getLogger(), "print trajectory");
-    for (unsigned int i = 0; i < num_pts; ++i)
-    {
-      const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
-      const auto t = std::min(t_scale, 1.0) * optimized_trajectory.value().end_time();
-      RCLCPP_INFO_STREAM(getLogger(), "Positions size: " << optimized_trajectory.value().value(t).size());
-      plant.SetPositions(&plant_context, optimized_trajectory.value().value(t));
-      auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
-      visualizer_->ForcedPublish(vis_context);
-      // Without these sleeps, the visualizer won't give you time to load your browser
-      std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-    }
-    visualizer_->StopRecording();
-    visualizer_->PublishRecording();
+    // Visualize the trajectory with Meshcat (uncomment to visualize)
+    // visualizer_->StartRecording();
+    // const auto num_pts = res.trajectory->getWayPointCount();
+    // RCLCPP_INFO_STREAM(getLogger(), "print trajectory");
+    // for (unsigned int i = 0; i < num_pts; ++i)
+    // {
+    //   const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+    //   const auto t = std::min(t_scale, 1.0) * optimized_trajectory.end_time();
+    //   plant.SetPositions(&plant_context, optimized_trajectory.value(t));
+    //   auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+    //   visualizer_->ForcedPublish(vis_context);
+    //   // Without these sleeps, the visualizer won't give you time to load your browser
+    //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // }
+    // visualizer_->StopRecording();
+    // visualizer_->PublishRecording();
 
     res.error_code = moveit::core::MoveItErrorCode::SUCCESS;
   }
