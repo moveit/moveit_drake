@@ -171,7 +171,6 @@ public:
     // Create drake::trajectories::Trajectory from moveit trajectory
     auto input_path = getPiecewisePolynomial(*res.trajectory, joint_model_group, plant);
 
-    input_path.end_time(input_path.end_time() * 2);
     // Run toppra
     const auto grid_points = Toppra::CalcGridPoints(input_path, CalcGridPointsOptions());
     auto toppra = Toppra(input_path, plant, grid_points);
@@ -235,7 +234,7 @@ protected:
   std::unique_ptr<Diagram<double>> diagram_;
   std::unique_ptr<Context<double>> diagram_context_;
 
-  // Temporary visualization
+  // Optional visualization
   std::shared_ptr<Meshcat> meshcat_;
   MeshcatVisualizer<double>* visualizer_;
 };

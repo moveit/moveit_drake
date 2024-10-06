@@ -73,10 +73,26 @@ namespace moveit::drake
                                                      const std::string& group_name,
                                                      const ::drake::multibody::MultibodyPlant<double>& plant);
 
+/**
+ * @brief Copy velocity bounds from joint model group to Eigen vectors
+ *
+ * @param joint_model_group Joint model group to get velocity bounds from
+ * @param plant Drake MultiBody Plant, used to get model information
+ * @param lower_velocity_bounds Lower velocity bounds populated by this function
+ * @param upper_velocity_bounds Upper velocity bounds populated by this function
+ */
 void getVelocityBounds(const moveit::core::JointModelGroup* joint_model_group,
                        const ::drake::multibody::MultibodyPlant<double>& plant, Eigen::VectorXd& lower_velocity_bounds,
                        Eigen::VectorXd& upper_velocity_bounds);
 
+/**
+ * @brief Get the Acceleration Bounds object
+ *
+ * @param joint_model_group Joint model group to get acceleration bounds from
+ * @param plant Drake model plant, used to get model information
+ * @param lower_acceleration_bounds Lower acceleration bounds ppulated by this function
+ * @param upper_acceleration_bounds Upper acceleration bounds populated by this function
+ */
 void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_group,
                            const ::drake::multibody::MultibodyPlant<double>& plant,
                            Eigen::VectorXd& lower_acceleration_bounds, Eigen::VectorXd& upper_acceleration_bounds);
@@ -87,6 +103,7 @@ void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_grou
  *
  * @param robot_trajectory MoveIt trajectory to be translated
  * @param group Joint group for which a piecewise polynomial is created
+ * @param plant Drake Multibody Plant, used to get model information
  * @return ::drake::trajectories::PiecewisePolynomial<double>
  */
 [[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
@@ -100,6 +117,7 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
  *
  * @param drake_trajectory Drake trajectory
  * @param delta_t Time step size
+ * @param plant Drake Multibody Plant, used to get model information
  * @param moveit_trajectory MoveIt trajectory to be populated based on the piecewise polynomial
  */
 void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
