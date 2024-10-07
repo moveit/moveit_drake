@@ -46,31 +46,9 @@
 #include <drake/multibody/plant/multibody_plant.h>
 #include <drake/common/trajectories/trajectory.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
+
 namespace moveit::drake
 {
-/**
- * @brief Create a Piecewise Polynomial from a moveit trajectory (see
- * https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html)
- *
- * @param robot_trajectory MoveIt trajectory to be translated
- * @param group Joint group for which a piecewise polynomial is created
- * @return ::drake::trajectories::PiecewisePolynomial<double>
- */
-[[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
-getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory,
-                       const moveit::core::JointModelGroup* group);
-
-/**
- * @brief Create a moveit trajectory from a piecewise polynomial. Assumes that the piecewise polynomial describes a
- * joint trajectory for every active joint of the given trajectory.
- *
- * @param drake_trajectory Drake trajectory
- * @param delta_t Time step size
- * @param moveit_trajectory MoveIt trajectory to be populated based on the piecewise polynomial
- */
-void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
-                        std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory);
-
 /**
  * @brief Get a joint positions vector for a MultibodyPlant from a MoveIt robot state
  *
@@ -94,4 +72,55 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
 [[nodiscard]] Eigen::VectorXd getJointVelocityVector(const moveit::core::RobotState& moveit_state,
                                                      const std::string& group_name,
                                                      const ::drake::multibody::MultibodyPlant<double>& plant);
+
+/**
+ * @brief Copy velocity bounds from joint model group to Eigen vectors
+ *
+ * @param joint_model_group Joint model group to get velocity bounds from
+ * @param plant Drake MultiBody Plant, used to get model information
+ * @param lower_velocity_bounds Lower velocity bounds populated by this function
+ * @param upper_velocity_bounds Upper velocity bounds populated by this function
+ */
+void getVelocityBounds(const moveit::core::JointModelGroup* joint_model_group,
+                       const ::drake::multibody::MultibodyPlant<double>& plant, Eigen::VectorXd& lower_velocity_bounds,
+                       Eigen::VectorXd& upper_velocity_bounds);
+
+/**
+ * @brief Get the Acceleration Bounds object
+ *
+ * @param joint_model_group Joint model group to get acceleration bounds from
+ * @param plant Drake model plant, used to get model information
+ * @param lower_acceleration_bounds Lower acceleration bounds ppulated by this function
+ * @param upper_acceleration_bounds Upper acceleration bounds populated by this function
+ */
+void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_group,
+                           const ::drake::multibody::MultibodyPlant<double>& plant,
+                           Eigen::VectorXd& lower_acceleration_bounds, Eigen::VectorXd& upper_acceleration_bounds);
+
+/**
+ * @brief Create a Piecewise Polynomial from a moveit trajectory (see
+ * https://drake.mit.edu/doxygen_cxx/classdrake_1_1trajectories_1_1_piecewise_polynomial.html)
+ *
+ * @param robot_trajectory MoveIt trajectory to be translated
+ * @param group Joint group for which a piecewise polynomial is created
+ * @param plant Drake Multibody Plant, used to get model information
+ * @return ::drake::trajectories::PiecewisePolynomial<double>
+ */
+[[nodiscard]] ::drake::trajectories::PiecewisePolynomial<double>
+getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajectory,
+                       const moveit::core::JointModelGroup* group,
+                       const ::drake::multibody::MultibodyPlant<double>& plant);
+
+/**
+ * @brief Create a moveit trajectory from a piecewise polynomial. Assumes that the piecewise polynomial describes a
+ * joint trajectory for every active joint of the given trajectory.
+ *
+ * @param drake_trajectory Drake trajectory
+ * @param delta_t Time step size
+ * @param plant Drake Multibody Plant, used to get model information
+ * @param moveit_trajectory MoveIt trajectory to be populated based on the piecewise polynomial
+ */
+void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
+                        const ::drake::multibody::MultibodyPlant<double>& plant,
+                        std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory);
 }  // namespace moveit::drake

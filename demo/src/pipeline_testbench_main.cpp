@@ -371,9 +371,8 @@ int main(int argc, char** argv)
                               { "drake_toppra", "" } },
                             motion_plan_req);
     }
+    demo.getVisualTools().prompt("Press 'next' in the RvizVisualToolsGui window to finish the demo");
   }
-  demo.getVisualTools().prompt("Press 'next' in the RvizVisualToolsGui window to finish the demo");
-
   rclcpp::shutdown();
   return 0;
 }

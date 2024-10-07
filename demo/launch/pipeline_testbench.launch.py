@@ -101,7 +101,6 @@ def launch_setup(context, *args, **kwargs):
                 "default_planning_request_adapters/CheckStartStateCollision",
             ],
             "response_adapters": [
-                "default_planning_response_adapters/AddTimeOptimalParameterization",
                 "moveit/drake/AddToppraTimeParameterization",
                 "default_planning_response_adapters/ValidateSolution",
                 "default_planning_response_adapters/DisplayMotionPath",
