@@ -52,8 +52,14 @@ add_library(
   # Conversions
   src/conversions.cpp)
 
-ament_target_dependencies(moveit_drake rclcpp pluginlib moveit_core moveit_msgs
-                          EIGEN3 shape_msgs)
+ament_target_dependencies(
+  moveit_drake
+  rclcpp
+  pluginlib
+  moveit_core
+  moveit_msgs
+  EIGEN3
+  shape_msgs)
 target_link_libraries(moveit_drake drake::drake ktopt_moveit_parameters)
 
 # Ensure that the plugin finds libdrake.so at runtime

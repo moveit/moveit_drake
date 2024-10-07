@@ -7,7 +7,6 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <shape_msgs/msg/solid_primitive.h>
 
-
 #include "ktopt_interface/ktopt_planning_context.hpp"
 
 namespace ktopt_interface
@@ -56,7 +55,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const int num_velocities = plant.num_velocities();
   const auto link_ee = params_.link_ee;
   const auto& link_ee_frame = plant.GetFrameByName(link_ee);
-
 
   // extract position and velocity bounds
   std::vector<double> lower_position_bounds;
@@ -183,43 +181,35 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddDurationConstraint(0.5, 5);
 
   // process path_constraints
-  if (!req.path_constraints.position_constraints.empty()) {
-    for (const auto &position_constraint :
-         req.path_constraints.position_constraints) {
+  if (!req.path_constraints.position_constraints.empty())
+  {
+    for (const auto& position_constraint : req.path_constraints.position_constraints)
+    {
       // Extract the bounding box's center (primitive pose)
-      const auto &primitive_pose =
-          position_constraint.constraint_region.primitive_poses[0];
-      Eigen::Vector3d box_center(primitive_pose.position.x,
-                                 primitive_pose.position.y,
-                                 primitive_pose.position.z);
+      const auto& primitive_pose = position_constraint.constraint_region.primitive_poses[0];
+      Eigen::Vector3d box_center(primitive_pose.position.x, primitive_pose.position.y, primitive_pose.position.z);
 
       // Extract dimensions of the bounding box from
       // constraint_region.primitives Assuming it is a box
       // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
-      const auto &primitive =
-          position_constraint.constraint_region.primitives[0];
-      if (primitive.type == shape_msgs::msg::SolidPrimitive::BOX) {
-        double x_dim =
-            primitive.dimensions[0] / 2.0;
-        double y_dim =
-            primitive.dimensions[1] / 2.0;
-        double z_dim =
-            primitive.dimensions[2] / 2.0;
+      const auto& primitive = position_constraint.constraint_region.primitives[0];
+      if (primitive.type == shape_msgs::msg::SolidPrimitive::BOX)
+      {
+        double x_dim = primitive.dimensions[0] / 2.0;
+        double y_dim = primitive.dimensions[1] / 2.0;
+        double z_dim = primitive.dimensions[2] / 2.0;
 
         // Calculate the lower and upper bounds based on the box dimensions
         // around the center
-        Eigen::Vector3d lower_bound =
-            box_center - Eigen::Vector3d(x_dim, y_dim, z_dim);
-        Eigen::Vector3d upper_bound =
-            box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
+        Eigen::Vector3d lower_bound = box_center - Eigen::Vector3d(x_dim, y_dim, z_dim);
+        Eigen::Vector3d upper_bound = box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
 
         // Add position constraint to each knot point of the trajectory
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 10; ++i)
+        {
           trajopt.AddPathPositionConstraint(
-              std::make_shared<PositionConstraint>(
-                  &plant, plant.world_frame(), lower_bound, upper_bound,
-                  link_ee_frame, Eigen::Vector3d(0.0, 0.1, 0.0),
-                  &plant_context),
+              std::make_shared<PositionConstraint>(&plant, plant.world_frame(), lower_bound, upper_bound, link_ee_frame,
+                                                   Eigen::Vector3d(0.0, 0.1, 0.0), &plant_context),
               static_cast<double>(i) / 10.0);
         }
       }

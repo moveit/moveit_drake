@@ -25,7 +25,6 @@
 #include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
 #include <drake/multibody/inverse_kinematics/position_constraint.h>
 
-
 namespace ktopt_interface
 {
 // declare all namespaces to be used
@@ -53,8 +52,8 @@ using drake::multibody::AddMultibodyPlantSceneGraph;
 using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
-using drake::multibody::PositionConstraint;
 using drake::multibody::Parser;
+using drake::multibody::PositionConstraint;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Context;
