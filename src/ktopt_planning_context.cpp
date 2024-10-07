@@ -5,6 +5,7 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <shape_msgs/msg/solid_primitive.h>
 
 
 #include "ktopt_interface/ktopt_planning_context.hpp"
@@ -54,7 +55,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
   const auto link_ee = params_.link_ee;
-  const auto link_ee_frame = plant.GetFrameByName(link_ee);
+  const auto& link_ee_frame = plant.GetFrameByName(link_ee);
 
 
   // extract position and velocity bounds
@@ -197,7 +198,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
       // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
       const auto &primitive =
           position_constraint.constraint_region.primitives[0];
-      if (primitive.type == shape_msgs::SolidPrimitive::BOX) {
+      if (primitive.type == shape_msgs::msg::SolidPrimitive::BOX) {
         double x_dim =
             primitive.dimensions[0] / 2.0;
         double y_dim =
@@ -212,22 +213,14 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
         Eigen::Vector3d upper_bound =
             box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
 
-        // Create PositionConstraint for the path
-        PositionConstraint path_constraint(
-            &plant,
-            plant.world_frame(), // Reference frame is the world frame
-            lower_bound,         // Lower bound on position
-            upper_bound,         // Upper bound on position
-            gripper_frame,       // Frame of the gripper (end-effector)
-            Eigen::Vector3d(
-                0.0, 0.1,
-                0.0), // Reference point in the gripper frame (if any offset)
-            plant_context.get() // Plant context
-        );
-
         // Add position constraint to each knot point of the trajectory
         for (int i = 0; i < 10; ++i) {
-          trajopt.AddPathPositionConstraint(path_constraint, static_cast<double>(i) / 10.0);
+          trajopt.AddPathPositionConstraint(
+              std::make_shared<PositionConstraint>(
+                  &plant, plant.world_frame(), lower_bound, upper_bound,
+                  link_ee_frame, Eigen::Vector3d(0.0, 0.1, 0.0),
+                  &plant_context),
+              static_cast<double>(i) / 10.0);
         }
       }
     }
