@@ -54,11 +54,11 @@ add_library(
 
 ament_target_dependencies(
   moveit_drake
-  rclcpp
-  pluginlib
+  EIGEN3
   moveit_core
   moveit_msgs
-  EIGEN3
+  pluginlib
+  rclcpp
   shape_msgs)
 target_link_libraries(moveit_drake drake::drake ktopt_moveit_parameters)
 

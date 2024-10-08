@@ -6,7 +6,7 @@ ktopt_interface:
   }
   link_ee: {
     type: string,
-    description: "Name of the end-effector frame as per urdf/sdf",
+    description: "Name of the end-effector frame as per urdf/srdf",
     default_value: "panda_hand"
   }
   num_iterations: {

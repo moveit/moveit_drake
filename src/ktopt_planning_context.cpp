@@ -258,6 +258,7 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       const auto& primitive = position_constraint.constraint_region.primitives[0];
       if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
       {
+        RCLCPP_WARN(getLogger(), "Expects a bounding box constraint as a SolidPrimitive::BOX");
         continue;
       }
 
@@ -271,7 +272,7 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       Eigen::Vector3d upper_bound = box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
 
       // Add position constraint to each knot point of the trajectory
-      for (int i = 0; i < 10; ++i)
+      for (int i = 0; i < params_.num_position_constraint_points; ++i)
       {
         trajopt.AddPathPositionConstraint(
             std::make_shared<PositionConstraint>(&plant, plant.world_frame(), lower_bound, upper_bound, link_ee_frame,
