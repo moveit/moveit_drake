@@ -52,8 +52,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
-  const auto link_ee = params_.link_ee;
-  const auto& link_ee_frame = plant.GetFrameByName(link_ee);
+  // const auto link_ee = params_.link_ee;
+  // const auto& link_ee_frame = plant.GetFrameByName(link_ee);
 
   // extract position and velocity bounds
   std::vector<double> lower_position_bounds;
@@ -180,7 +180,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddDurationConstraint(0.5, 5);
 
   // process path_constraints
-  addPathPositionConstraints(trajopt, plant, link_ee_frame, plant_context);
+  addPathPositionConstraints(trajopt, plant, plant_context);
 
   // solve the program
   auto result = Solve(prog);
@@ -237,7 +237,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
 void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt,
                                                       const MultibodyPlant<double>& plant,
-                                                      const Frame<double>& link_ee_frame,
                                                       Context<double>& plant_context)
 {
   // retrieve the motion planning request
@@ -255,6 +254,14 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       // Extract dimensions of the bounding box from
       // constraint_region.primitives Assuming it is a box
       // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
+      const auto link_ee = position_constraint.link_name;
+      if (!plant.HasBodyNamed(link_ee))
+      {
+        RCLCPP_ERROR(getLogger(), "The link specified in the PositionConstraint message does not exist in the Drake "
+                                  "plant, please check your URDF");
+        continue;
+      }
+      const auto& link_ee_frame = plant.GetFrameByName(link_ee);
       const auto& primitive = position_constraint.constraint_region.primitives[0];
       if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
       {

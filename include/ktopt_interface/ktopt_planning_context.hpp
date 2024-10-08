@@ -83,7 +83,7 @@ public:
   void setRobotDescription(std::string robot_description);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
   void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
-                                  const Frame<double>& link_ee_frame, Context<double>& plant_context);
+                                  Context<double>& plant_context);
 
 private:
   const ktopt_interface::Params params_;
