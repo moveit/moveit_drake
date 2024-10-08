@@ -36,8 +36,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     moveit_visual_tools
     rclcpp
     rviz_visual_tools
-    warehouse_ros
-    shape_msgs)
+    shape_msgs
+    warehouse_ros)
 
 include_directories(include)
 

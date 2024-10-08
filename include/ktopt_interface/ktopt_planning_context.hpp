@@ -1,6 +1,7 @@
 #pragma once
 
 #include <moveit/planning_interface/planning_interface.h>
+#include <shape_msgs/msg/solid_primitive.h>
 #include <ktopt_moveit_parameters.hpp>
 
 // relevant drake includes
@@ -49,6 +50,7 @@ using drake::geometry::SourceId;
 using drake::geometry::Sphere;
 using drake::math::RigidTransformd;
 using drake::multibody::AddMultibodyPlantSceneGraph;
+using drake::multibody::Frame;
 using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
@@ -80,6 +82,8 @@ public:
 
   void setRobotDescription(std::string robot_description);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
+  void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
+                                  const Frame<double>& link_ee_frame, Context<double>& plant_context);
 
 private:
   const ktopt_interface::Params params_;

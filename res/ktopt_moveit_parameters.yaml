@@ -49,6 +49,22 @@ ktopt_interface:
       gt_eq<>: [0.0]
     }
   }
+  num_position_constraint_points: {
+    type: int,
+    description: "Number of points on the path that moveit's bounding box constraint needs to be imposed",
+    default_value: 10,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
+  num_orientation_constraint_points: {
+    type: int,
+    description: "Number of points on the path where moveit's orientation constraint needs to be imposed",
+    default_value: 10,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
   joint_jerk_bound: {
     type: double,
     description: "Maximum jerk that is allowed for generated trajectory",
