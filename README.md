@@ -78,6 +78,8 @@ ros2 launch moveit_drake pipeline_testbench.launch.py
 - Use [pre-commit to format your
   code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
 
+Within the container you can run the following command to format the code
+
     # inside the moveit_drake package
     pre-commit run -a
 

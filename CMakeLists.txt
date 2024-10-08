@@ -23,6 +23,7 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(warehouse_ros REQUIRED)
+find_package(shape_msgs REQUIRED)
 
 generate_parameter_library(ktopt_moveit_parameters
                            res/ktopt_moveit_parameters.yaml)
@@ -35,6 +36,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     moveit_visual_tools
     rclcpp
     rviz_visual_tools
+    shape_msgs
     warehouse_ros)
 
 include_directories(include)
@@ -50,8 +52,14 @@ add_library(
   # Conversions
   src/conversions.cpp)
 
-ament_target_dependencies(moveit_drake rclcpp pluginlib moveit_core moveit_msgs
-                          EIGEN3)
+ament_target_dependencies(
+  moveit_drake
+  EIGEN3
+  moveit_core
+  moveit_msgs
+  pluginlib
+  rclcpp
+  shape_msgs)
 target_link_libraries(moveit_drake drake::drake ktopt_moveit_parameters)
 
 # Ensure that the plugin finds libdrake.so at runtime

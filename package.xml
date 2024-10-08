@@ -14,6 +14,7 @@
   <depend>moveit_visual_tools</depend>
   <depend>rviz_visual_tools</depend>
   <depend>warehouse_ros_sqlite</depend>
+  <depend>shape_msgs</depend>
 
   <build_depend>eigen</build_depend>
   <build_depend>moveit_common</build_depend>

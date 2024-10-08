@@ -1,10 +1,10 @@
 #include <cmath>
 
-#include <moveit/drake/conversions.hpp>
-#include <moveit/robot_state/conversions.h>
-#include <moveit/planning_interface/planning_interface.h>
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
+#include <moveit/drake/conversions.hpp>
+#include <moveit/planning_interface/planning_interface.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include "ktopt_interface/ktopt_planning_context.hpp"
 
@@ -30,8 +30,8 @@ KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::s
 
 void KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse& /*res*/)
 {
-  RCLCPP_ERROR(getLogger(),
-               "KTOptPlanningContext::solve(planning_interface::MotionPlanDetailedResponse&) is not implemented!");
+  RCLCPP_ERROR(getLogger(), "KTOptPlanningContext::solve(planning_interface::"
+                            "MotionPlanDetailedResponse&) is not implemented!");
   return;
 }
 
@@ -52,6 +52,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
+  // const auto link_ee = params_.link_ee;
+  // const auto& link_ee_frame = plant.GetFrameByName(link_ee);
 
   // extract position and velocity bounds
   std::vector<double> lower_position_bounds;
@@ -177,6 +179,9 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // TODO: These should be parameters
   trajopt.AddDurationConstraint(0.5, 5);
 
+  // process path_constraints
+  addPathPositionConstraints(trajopt, plant, plant_context);
+
   // solve the program
   auto result = Solve(prog);
 
@@ -199,7 +204,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
                                       static_cast<double>(s) / (params_.num_collision_check_points - 1));
   }
 
-  // The previous solution is used to warm-start the collision checked optimization problem
+  // The previous solution is used to warm-start the collision checked
+  // optimization problem
   auto collision_free_result = Solve(prog);
 
   // package up the resulting trajectory
@@ -218,7 +224,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
     plant.SetPositions(&plant_context, traj.value(t));
     auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
     visualizer_->ForcedPublish(vis_context);
-    // Without these sleeps, the visualizer won't give you time to load your browser
+    // Without these sleeps, the visualizer won't give you time to load your
+    // browser
     // TODO: This should not hold up planning time
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
   }
@@ -226,6 +233,61 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   visualizer_->PublishRecording();
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
+}
+
+void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt,
+                                                      const MultibodyPlant<double>& plant,
+                                                      Context<double>& plant_context)
+{
+  // retrieve the motion planning request
+  const auto& req = getMotionPlanRequest();
+
+  // check for path position constraints
+  if (!req.path_constraints.position_constraints.empty())
+  {
+    for (const auto& position_constraint : req.path_constraints.position_constraints)
+    {
+      // Extract the bounding box's center (primitive pose)
+      const auto& primitive_pose = position_constraint.constraint_region.primitive_poses[0];
+      Eigen::Vector3d box_center(primitive_pose.position.x, primitive_pose.position.y, primitive_pose.position.z);
+
+      // Extract dimensions of the bounding box from
+      // constraint_region.primitives Assuming it is a box
+      // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
+      const auto link_ee = position_constraint.link_name;
+      if (!plant.HasBodyNamed(link_ee))
+      {
+        RCLCPP_ERROR(getLogger(), "The link specified in the PositionConstraint message does not exist in the Drake "
+                                  "plant, please check your URDF");
+        continue;
+      }
+      const auto& link_ee_frame = plant.GetFrameByName(link_ee);
+      const auto& primitive = position_constraint.constraint_region.primitives[0];
+      if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
+      {
+        RCLCPP_WARN(getLogger(), "Expects a bounding box constraint as a SolidPrimitive::BOX");
+        continue;
+      }
+
+      double x_dim = primitive.dimensions[0] / 2.0;
+      double y_dim = primitive.dimensions[1] / 2.0;
+      double z_dim = primitive.dimensions[2] / 2.0;
+
+      // Calculate the lower and upper bounds based on the box dimensions
+      // around the center
+      Eigen::Vector3d lower_bound = box_center - Eigen::Vector3d(x_dim, y_dim, z_dim);
+      Eigen::Vector3d upper_bound = box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
+
+      // Add position constraint to each knot point of the trajectory
+      for (int i = 0; i < params_.num_position_constraint_points; ++i)
+      {
+        trajopt.AddPathPositionConstraint(
+            std::make_shared<PositionConstraint>(&plant, plant.world_frame(), lower_bound, upper_bound, link_ee_frame,
+                                                 Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
+            static_cast<double>(i) / (params_.num_position_constraint_points - 1));
+      }
+    }
+  }
 }
 
 bool KTOptPlanningContext::terminate()
@@ -248,7 +310,8 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(builder.get(), 0.0);
 
   // TODO:(kamiradi) Figure out object parsing
-  // auto robot_instance = Parser(plant_, scene_graph_).AddModelsFromString(robot_description_, ".urdf");
+  // auto robot_instance = Parser(plant_,
+  // scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
   const char* ModelUrl = params_.drake_robot_description.c_str();
   const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);

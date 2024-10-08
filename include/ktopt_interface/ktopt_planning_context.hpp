@@ -1,6 +1,7 @@
 #pragma once
 
 #include <moveit/planning_interface/planning_interface.h>
+#include <shape_msgs/msg/solid_primitive.h>
 #include <ktopt_moveit_parameters.hpp>
 
 // relevant drake includes
@@ -23,6 +24,7 @@
 #include "drake/visualization/visualization_config.h"
 #include "drake/visualization/visualization_config_functions.h"
 #include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
+#include <drake/multibody/inverse_kinematics/position_constraint.h>
 
 namespace ktopt_interface
 {
@@ -48,10 +50,12 @@ using drake::geometry::SourceId;
 using drake::geometry::Sphere;
 using drake::math::RigidTransformd;
 using drake::multibody::AddMultibodyPlantSceneGraph;
+using drake::multibody::Frame;
 using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
 using drake::multibody::PackageMap;
 using drake::multibody::Parser;
+using drake::multibody::PositionConstraint;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::solvers::Solve;
 using drake::systems::Context;
@@ -78,6 +82,8 @@ public:
 
   void setRobotDescription(std::string robot_description);
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
+  void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
+                                  Context<double>& plant_context);
 
 private:
   const ktopt_interface::Params params_;
