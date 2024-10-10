@@ -1,8 +1,12 @@
 add_executable(pipeline_testbench_example src/pipeline_testbench_main.cpp)
-target_include_directories(pipeline_testbench_example PRIVATE include)
 ament_target_dependencies(pipeline_testbench_example
-                          ${THIS_PACKAGE_INCLUDE_DEPENDS} Boost)
+                          ${THIS_PACKAGE_INCLUDE_DEPENDS})
 
-install(TARGETS pipeline_testbench_example DESTINATION lib/${PROJECT_NAME})
+add_executable(constrained_planning_demo src/constrained_planning_demo.cpp)
+ament_target_dependencies(constrained_planning_demo
+                          ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
+install(TARGETS pipeline_testbench_example constrained_planning_demo
+        DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
