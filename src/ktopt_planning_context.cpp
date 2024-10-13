@@ -159,6 +159,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, plant, res.trajectory);
 
   // Visualize the trajectory with Meshcat
+
   // TODO: add to conversions
   if (params_.meshcat_visualise)
   {
