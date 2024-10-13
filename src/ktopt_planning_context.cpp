@@ -124,7 +124,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddDurationConstraint(params_.min_trajectory_time, params_.max_trajectory_time);
 
   // process path_constraints
-  addPathPositionConstraints(trajopt, plant, plant_context);
+  addPathPositionConstraints(trajopt, plant, plant_context, params_.position_constraint_padding);
 
   // solve the program
   auto result = Solve(prog);
@@ -181,7 +181,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
 void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt,
                                                       const MultibodyPlant<double>& plant,
-                                                      Context<double>& plant_context)
+                                                      Context<double>& plant_context, const double padding)
 {
   // retrieve the motion planning request
   const auto& req = getMotionPlanRequest();
@@ -198,14 +198,28 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       // Extract dimensions of the bounding box from
       // constraint_region.primitives Assuming it is a box
       // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
-      const auto link_ee = position_constraint.link_name;
-      if (!plant.HasBodyNamed(link_ee))
+      const auto link_ee_name = position_constraint.link_name;
+      if (!plant.HasBodyNamed(link_ee_name))
       {
-        RCLCPP_ERROR(getLogger(), "The link specified in the PositionConstraint message does not exist in the Drake "
-                                  "plant, please check your URDF");
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     link_ee_name.c_str());
         continue;
       }
-      const auto& link_ee_frame = plant.GetFrameByName(link_ee);
+      const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
+
+      const auto base_frame_name = position_constraint.header.frame_id;
+      if (!plant.HasBodyNamed(base_frame_name))
+      {
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     base_frame_name.c_str());
+        continue;
+      }
+      const auto& base_frame = plant.GetFrameByName(base_frame_name);
+
       const auto& primitive = position_constraint.constraint_region.primitives[0];
       if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
       {
@@ -215,8 +229,9 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
 
       // Calculate the lower and upper bounds based on the box dimensions
       // around the center
-      const auto offset_vec =
-          Eigen::Vector3d(primitive.dimensions[0] / 2.0, primitive.dimensions[1] / 2.0, primitive.dimensions[2] / 2.0);
+      const auto offset_vec = Eigen::Vector3d(std::max(0.0, primitive.dimensions[0] / 2.0 - padding),
+                                              std::max(0.0, primitive.dimensions[1] / 2.0 - padding),
+                                              std::max(0.0, primitive.dimensions[2] / 2.0 - padding));
       const auto lower_bound = box_center - offset_vec;
       const auto upper_bound = box_center + offset_vec;
 
@@ -224,7 +239,7 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       for (int i = 0; i < params_.num_position_constraint_points; ++i)
       {
         trajopt.AddPathPositionConstraint(
-            std::make_shared<PositionConstraint>(&plant, plant.world_frame(), lower_bound, upper_bound, link_ee_frame,
+            std::make_shared<PositionConstraint>(&plant, base_frame, lower_bound, upper_bound, link_ee_frame,
                                                  Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
             static_cast<double>(i) / (params_.num_position_constraint_points - 1));
       }

@@ -84,11 +84,27 @@ ktopt_interface:
       gt_eq<>: [2]
     }
   }
+  position_constraint_padding: {
+    type: double,
+    description: "Padding distance for position constraints, in meters, to make sure optimizing at sampled points still globally meets constraints.",
+    default_value: 0.005,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
   num_orientation_constraint_points: {
     type: int,
     description: "Number of points on the path where MoveIt's orientation constraint needs to be imposed.",
     default_value: 10,
     validation: {
       gt_eq<>: [2]
+    }
+  }
+  orientation_constraint_padding: {
+    type: double,
+    description: "Padding distance for orientation constraints, in radians, to make sure optimizing at sampled points still globally meets constraints.",
+    default_value: 0.005,
+    validation: {
+      gt_eq<>: [0.0]
     }
   }
