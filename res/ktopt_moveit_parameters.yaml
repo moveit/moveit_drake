@@ -108,3 +108,11 @@ ktopt_interface:
       gt_eq<>: [0.0]
     }
   }
+  meshcat_visualise: {
+    type: bool,
+    description: "Whether to visualise the Drake scene grpah trajectory in Meshcat.",
+    default_value: false,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
