@@ -25,6 +25,8 @@ int main(int argc, char** argv)
                                               move_group_interface.getRobotModel() };
 
   rclcpp::sleep_for(1s);
+  // Use KTOpt
+  move_group_interface.setPlanningPipelineId("drake_ktopt");
 
   // Create some helpful lambdas
   auto current_pose = move_group_interface.getCurrentPose();
@@ -154,9 +156,6 @@ int main(int argc, char** argv)
   // And again, configure and solve the planning problem
   move_group_interface.setPoseTarget(target_pose);
   move_group_interface.setPlanningTime(10.0);
-
-  // Use KTOpt
-  move_group_interface.setPlanningPipelineId("drake_ktopt");
 
   success = (move_group_interface.plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
   RCLCPP_INFO(LOGGER, "Plan with plane constraint %s", success ? "" : "FAILED");

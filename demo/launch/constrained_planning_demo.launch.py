@@ -47,6 +47,10 @@ def generate_launch_description():
         }
     }
 
+    # Add drake_ktopt_planning_pipeline_config to moveit_config
+    moveit_config.planning_pipelines["planning_pipelines"] = ["ompl", "drake_ktopt"]
+    moveit_config.planning_pipelines.update(drake_ktopt_planning_pipeline_config)
+
     # Start the actual move_group node/action server
     run_move_group_node = Node(
         package="moveit_ros_move_group",
@@ -81,6 +85,9 @@ def generate_launch_description():
         parameters=[
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,
+            moveit_config.planning_pipelines,
+            moveit_config.robot_description_kinematics,
+            moveit_config.joint_limits,
         ],
     )
 
