@@ -120,7 +120,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPositionBounds(lower_position_bounds, upper_position_bounds);
   trajopt.AddVelocityBounds(lower_velocity_bounds, upper_velocity_bounds);
   trajopt.AddAccelerationBounds(lower_acceleration_bounds, upper_acceleration_bounds);
-  //trajopt.AddJerkBounds(lower_jerk_bounds, upper_jerk_bounds);
+  trajopt.AddJerkBounds(lower_jerk_bounds, upper_jerk_bounds);
 
   // Add constraints on duration
   // TODO: These should be parameters
