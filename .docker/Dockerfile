@@ -1,71 +1,36 @@
-FROM robotlocomotion/drake:1.29.0
+ARG ROS_DISTRO=rolling
+ARG RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+FROM moveit/moveit2:${ROS_DISTRO}-source
 LABEL maintainer="Aditya Kamireddypalli kamireddypalliaditya@gmail.com"
 
-ENV ROS_DISTRO=humble
-ENV WORKSPACE=/root/workspace/
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ENV ROS_DISTRO=${ROS_DISTRO}
+ENV RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION}
 ENV DEBIAN_FRONTEND=noninteractive
+ENV WORKSPACE=${ROS_UNDERLAY}/..
 
-# ROS installation
-RUN apt update && \
-    apt install locales && \
-    locale-gen en_US en_US.UTF-8 && \
-    update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
-    export LANG=en_US.UTF-8
+COPY . ${WORKSPACE}/src/moveit_drake
 
-RUN apt install -y software-properties-common && \
-    add-apt-repository universe
-
-RUN apt update && \
-    apt install -y curl git && \
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
-RUN apt update && \
-    apt upgrade -y && \
-    apt install -y \
-        build-essential \
-        clang-format-14 \
-        clangd-12 \
-        cmake \
-        git-lfs \
-        python3-colcon-common-extensions \
-        python3-flake8 \
-        python3-rosdep \
-        python3-setuptools \
-        python3-vcstool \
-        ros-dev-tools \
-        ros-${ROS_DISTRO}-desktop \
-        ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-        wget && \
-    update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
-
-RUN pip3 install colcon-mixin pre-commit && \
-    colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
-    colcon mixin update default
-
-RUN apt update && \
-    rosdep init && \
-    rosdep update
-
-# Setup the workspace
-WORKDIR ${WORKSPACE}
-RUN mkdir -p src
-
-# Install dependencies of this package
-# NOTE: Copying only the necessary files to not bust cache as much.
-COPY moveit_drake.repos ${WORKSPACE}/src/moveit_drake/
-WORKDIR ${WORKSPACE}/src/
-RUN vcs import < moveit_drake/moveit_drake.repos
-
-WORKDIR ${WORKSPACE}
-COPY package.xml ${WORKSPACE}/src/moveit_drake/
-RUN apt update && \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    rosdep install -r --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y && \
-    rm -rf src/moveit_drake
+RUN apt-get update && \
+    apt upgrade && \
+    apt install wget -y && \
+    wget https://github.com/RobotLocomotion/drake/releases/download/v1.30.0/drake-dev_1.30.0-1_amd64-noble.deb && \
+    apt install ./drake-dev_1.30.0-1_amd64-noble.deb -y
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    cd ${WORKSPACE}/src && \
+    vcs import < moveit_drake/.docker/upstream.repos --recursive
+
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    cd ${WORKSPACE} && \
+    rosdep update --rosdistro=$ROS_DISTRO && \
+    apt-get update && \
+    apt upgrade -y && \
+    rosdep install --from-paths src --ignore-src -r -y
+
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
+    cd ${WORKSPACE} && \
+    . install/setup.sh && \
     colcon build --mixin release --parallel-workers 1
 
 # Set up the entrypoint
