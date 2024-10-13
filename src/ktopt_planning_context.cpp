@@ -50,8 +50,6 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
-  const int num_positions = plant.num_positions();
-  const int num_velocities = plant.num_velocities();
 
   // Get velocity and acceleration bounds
   Eigen::VectorXd lower_position_bounds;
