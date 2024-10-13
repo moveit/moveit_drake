@@ -75,6 +75,31 @@ using ::drake::systems::DiagramBuilder;
   return joint_velocities;
 }
 
+void getPositionBounds(const moveit::core::JointModelGroup* joint_model_group, const MultibodyPlant<double>& plant,
+                       Eigen::VectorXd& lower_position_bounds, Eigen::VectorXd& upper_position_bounds)
+{
+  assert(plant.num_positions() >= joint_model_group->getActiveJointModels().size());
+  lower_position_bounds.resize(plant.num_positions());
+  upper_position_bounds.resize(plant.num_positions());
+  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  {
+    const moveit::core::VariableBounds& bounds = joint_model->getVariableBounds()[0];  // Assume single DoF joints
+    const auto& joint_name = joint_model->getName();
+    const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
+
+    if (bounds.position_bounded_)
+    {
+      lower_position_bounds(joint_index) = bounds.min_position_;
+      upper_position_bounds(joint_index) = bounds.max_position_;
+    }
+    else
+    {
+      lower_position_bounds(joint_index) = -std::numeric_limits<double>::max();
+      upper_position_bounds(joint_index) = std::numeric_limits<double>::max();
+    }
+  }
+}
+
 void getVelocityBounds(const moveit::core::JointModelGroup* joint_model_group, const MultibodyPlant<double>& plant,
                        Eigen::VectorXd& lower_velocity_bounds, Eigen::VectorXd& upper_velocity_bounds)
 {
@@ -121,6 +146,31 @@ void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_grou
     {
       lower_acceleration_bounds(joint_index) = -std::numeric_limits<double>::max();
       upper_acceleration_bounds(joint_index) = std::numeric_limits<double>::max();
+    }
+  }
+}
+
+void getJerkBounds(const moveit::core::JointModelGroup* joint_model_group, const MultibodyPlant<double>& plant,
+                   Eigen::VectorXd& lower_jerk_bounds, Eigen::VectorXd& upper_jerk_bounds)
+{
+  assert(plant.num_velocities() >= joint_model_group->getActiveJointModels().size());
+  lower_jerk_bounds.resize(plant.num_velocities());
+  upper_jerk_bounds.resize(plant.num_velocities());
+  for (const auto& joint_model : joint_model_group->getActiveJointModels())
+  {
+    const moveit::core::VariableBounds& bounds = joint_model->getVariableBounds()[0];  // Assume single DoF joints
+    const auto& joint_name = joint_model->getName();
+    const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
+
+    if (bounds.jerk_bounded_)
+    {
+      lower_jerk_bounds(joint_index) = bounds.min_jerk_;
+      upper_jerk_bounds(joint_index) = bounds.max_jerk_;
+    }
+    else
+    {
+      lower_jerk_bounds(joint_index) = -std::numeric_limits<double>::max();
+      upper_jerk_bounds(joint_index) = std::numeric_limits<double>::max();
     }
   }
 }

@@ -52,74 +52,21 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
   const int num_positions = plant.num_positions();
   const int num_velocities = plant.num_velocities();
-  // const auto link_ee = params_.link_ee;
-  // const auto& link_ee_frame = plant.GetFrameByName(link_ee);
 
-  // extract position and velocity bounds
-  std::vector<double> lower_position_bounds;
-  std::vector<double> upper_position_bounds;
-  std::vector<double> lower_velocity_bounds;
-  std::vector<double> upper_velocity_bounds;
-  std::vector<double> lower_acceleration_bounds;
-  std::vector<double> upper_acceleration_bounds;
-  std::vector<double> lower_jerk_bounds;
-  std::vector<double> upper_jerk_bounds;
-  lower_position_bounds.reserve(num_positions);
-  upper_position_bounds.reserve(num_positions);
-  lower_velocity_bounds.reserve(num_positions);
-  upper_velocity_bounds.reserve(num_positions);
-  lower_acceleration_bounds.reserve(num_positions);
-  upper_acceleration_bounds.reserve(num_positions);
-  lower_jerk_bounds.reserve(num_positions);
-  upper_jerk_bounds.reserve(num_positions);
+  // Get velocity and acceleration bounds
+  Eigen::VectorXd lower_position_bounds;
+  Eigen::VectorXd upper_position_bounds;
+  Eigen::VectorXd lower_velocity_bounds;
+  Eigen::VectorXd upper_velocity_bounds;
+  Eigen::VectorXd lower_acceleration_bounds;
+  Eigen::VectorXd upper_acceleration_bounds;
+  Eigen::VectorXd lower_jerk_bounds;
+  Eigen::VectorXd upper_jerk_bounds;
 
-  const auto& all_joint_models = joint_model_group->getJointModels();
-  for (const auto& joint_model : all_joint_models)
-  {
-    const auto& joint_name = joint_model->getName();
-    const bool is_active = joint_model_group->hasJointModel(joint_name);
-
-    if (is_active)
-    {
-      // Set bounds for active joints
-      const auto& bounds = joint_model->getVariableBounds()[0];
-      lower_position_bounds.push_back(bounds.min_position_);
-      upper_position_bounds.push_back(bounds.max_position_);
-      lower_velocity_bounds.push_back(-bounds.max_velocity_);
-      upper_velocity_bounds.push_back(bounds.max_velocity_);
-      lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
-      upper_acceleration_bounds.push_back(bounds.max_acceleration_);
-      lower_jerk_bounds.push_back(-params_.joint_jerk_bound);
-      upper_jerk_bounds.push_back(params_.joint_jerk_bound);
-    }
-    else
-    {
-      // Set default values for inactive joints
-      lower_position_bounds.push_back(-kDefaultJointMaxPosition);
-      upper_position_bounds.push_back(kDefaultJointMaxPosition);
-      lower_velocity_bounds.push_back(0.0);
-      upper_velocity_bounds.push_back(0.0);
-      lower_acceleration_bounds.push_back(0.0);
-      upper_acceleration_bounds.push_back(0.0);
-      lower_jerk_bounds.push_back(0.0);
-      upper_jerk_bounds.push_back(0.0);
-    }
-  }
-
-  Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
-                                                                lower_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
-                                                                upper_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_velocity_bounds_eigen(lower_velocity_bounds.data(),
-                                                                lower_velocity_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(upper_velocity_bounds.data(),
-                                                                upper_velocity_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_acceleration_bounds_eigen(lower_acceleration_bounds.data(),
-                                                                    lower_acceleration_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_acceleration_bounds_eigen(upper_acceleration_bounds.data(),
-                                                                    upper_acceleration_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_jerk_bounds_eigen(lower_jerk_bounds.data(), lower_jerk_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_jerk_bounds_eigen(upper_jerk_bounds.data(), upper_jerk_bounds.size());
+  moveit::drake::getPositionBounds(joint_model_group, plant, lower_position_bounds, upper_position_bounds);
+  moveit::drake::getVelocityBounds(joint_model_group, plant, lower_velocity_bounds, upper_velocity_bounds);
+  moveit::drake::getAccelerationBounds(joint_model_group, plant, lower_acceleration_bounds, upper_acceleration_bounds);
+  moveit::drake::getJerkBounds(joint_model_group, plant, lower_jerk_bounds, upper_jerk_bounds);
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -170,10 +117,10 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
   // TODO: Add constraints on joint position/velocity/acceleration
-  trajopt.AddPositionBounds(lower_position_bounds_eigen, upper_position_bounds_eigen);
-  trajopt.AddVelocityBounds(lower_velocity_bounds_eigen, upper_velocity_bounds_eigen);
-  trajopt.AddAccelerationBounds(lower_acceleration_bounds_eigen, upper_acceleration_bounds_eigen);
-  trajopt.AddJerkBounds(lower_jerk_bounds_eigen, upper_jerk_bounds_eigen);
+  trajopt.AddPositionBounds(lower_position_bounds, upper_position_bounds);
+  trajopt.AddVelocityBounds(lower_velocity_bounds, upper_velocity_bounds);
+  trajopt.AddAccelerationBounds(lower_acceleration_bounds, upper_acceleration_bounds);
+  //trajopt.AddJerkBounds(lower_jerk_bounds, upper_jerk_bounds);
 
   // Add constraints on duration
   // TODO: These should be parameters
