@@ -137,7 +137,7 @@ void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_grou
     const auto& joint_name = joint_model->getName();
     const auto& joint_index = plant.GetJointByName(joint_name).ordinal();
 
-    if (bounds.velocity_bounded_)
+    if (bounds.acceleration_bounded_)
     {
       lower_acceleration_bounds(joint_index) = bounds.min_acceleration_;
       upper_acceleration_bounds(joint_index) = bounds.max_acceleration_;

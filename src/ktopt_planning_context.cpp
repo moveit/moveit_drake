@@ -89,18 +89,12 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto trajopt = KinematicTrajectoryOptimization(plant.num_positions(), params_.num_control_points);
   auto& prog = trajopt.get_mutable_prog();
 
-  // Costs
-  // TODO: These should be parameters
-  trajopt.AddDurationCost(1.0);
-  trajopt.AddPathLengthCost(1.0);
-
+  // Add costs
+  trajopt.AddDurationCost(params_.duration_cost_weight);
+  trajopt.AddPathLengthCost(params_.path_length_cost_weight);
   // TODO: Adds quadratic cost
   // This acts as a secondary cost to push the solution towards joint centers
-  // prog.AddQuadraticErrorCost(
-  //   MatrixXd::Identity(joints.size(), joints.size()),
-  //   nominal_q_;
-  // );
-  // prog.AddQuadraticErrorCost();
+  // prog.AddQuadraticErrorCost(MatrixXd::Identity(plant.num_positions(), plant.num_positions()), nominal_q_, prog.control_points());
 
   // Constraints
   // Add constraints on start joint configuration and velocity
@@ -114,15 +108,20 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto& goal_velocity = moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant);
   trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
-  // TODO: Add constraints on joint position/velocity/acceleration
+  // Add constraints on joint kinematic limits.
   trajopt.AddPositionBounds(lower_position_bounds, upper_position_bounds);
   trajopt.AddVelocityBounds(lower_velocity_bounds, upper_velocity_bounds);
   trajopt.AddAccelerationBounds(lower_acceleration_bounds, upper_acceleration_bounds);
   trajopt.AddJerkBounds(lower_jerk_bounds, upper_jerk_bounds);
 
   // Add constraints on duration
-  // TODO: These should be parameters
-  trajopt.AddDurationConstraint(0.5, 5);
+  if (params_.min_trajectory_time > params_.max_trajectory_time)
+  {
+    RCLCPP_ERROR(getLogger(), "Minimum trajectory time cannot be greater than maximum trajectory time.");
+    res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
+    return;
+  }
+  trajopt.AddDurationConstraint(params_.min_trajectory_time, params_.max_trajectory_time);
 
   // process path_constraints
   addPathPositionConstraints(trajopt, plant, plant_context);
@@ -160,22 +159,22 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, plant, res.trajectory);
 
   // Visualize the trajectory with Meshcat
-  visualizer_->StartRecording();
-  const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
-  for (unsigned int i = 0; i < num_pts; ++i)
-  {
-    const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
-    const auto t = std::min(t_scale, 1.0) * traj.end_time();
-    plant.SetPositions(&plant_context, traj.value(t));
-    auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
-    visualizer_->ForcedPublish(vis_context);
-    // Without these sleeps, the visualizer won't give you time to load your
-    // browser
-    // TODO: This should not hold up planning time
-    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
-  }
-  visualizer_->StopRecording();
-  visualizer_->PublishRecording();
+  // visualizer_->StartRecording();
+  // const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
+  // for (unsigned int i = 0; i < num_pts; ++i)
+  // {
+  //   const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+  //   const auto t = std::min(t_scale, 1.0) * traj.end_time();
+  //   plant.SetPositions(&plant_context, traj.value(t));
+  //   auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+  //   visualizer_->ForcedPublish(vis_context);
+  //   // Without these sleeps, the visualizer won't give you time to load your
+  //   // browser
+  //   // TODO: This should not hold up planning time
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
+  // }
+  // visualizer_->StopRecording();
+  // visualizer_->PublishRecording();
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
 }
@@ -214,14 +213,12 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
         continue;
       }
 
-      double x_dim = primitive.dimensions[0] / 2.0;
-      double y_dim = primitive.dimensions[1] / 2.0;
-      double z_dim = primitive.dimensions[2] / 2.0;
-
       // Calculate the lower and upper bounds based on the box dimensions
       // around the center
-      Eigen::Vector3d lower_bound = box_center - Eigen::Vector3d(x_dim, y_dim, z_dim);
-      Eigen::Vector3d upper_bound = box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
+      const auto offset_vec =
+          Eigen::Vector3d(primitive.dimensions[0] / 2.0, primitive.dimensions[1] / 2.0, primitive.dimensions[2] / 2.0);
+      const auto lower_bound = box_center - offset_vec;
+      const auto upper_bound = box_center + offset_vec;
 
       // Add position constraint to each knot point of the trajectory
       for (int i = 0; i < params_.num_position_constraint_points; ++i)
