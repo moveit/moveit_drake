@@ -1,7 +1,7 @@
 ktopt_interface:
   drake_robot_description: {
     type: string,
-    description: "Robot description to be loaded by the internal Drake MultibodyPlant",
+    description: "Robot description to be loaded by the internal Drake MultibodyPlant.",
     default_value: "package://drake_models/franka_description/urdf/panda_arm_hand.urdf",
   }
   num_iterations: {
@@ -28,9 +28,41 @@ ktopt_interface:
       gt<>: [0.0]
     }
   }
+  min_trajectory_time: {
+    type: double,
+    description: "The minimum allowable trajectory time, in seconds.",
+    default_value: 0.5,
+    validation: {
+      gt<>: [0.0]
+    }
+  }
+  max_trajectory_time: {
+    type: double,
+    description: "The maximum allowable trajectory time, in seconds.",
+    default_value: 10.0,
+    validation: {
+      gt<>: [0.0]
+    }
+  }
+  duration_cost_weight: {
+    type: double,
+    description: "The weight on trajectory duration cost.",
+    default_value: 1.0,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
+  path_length_cost_weight: {
+    type: double,
+    description: "The weight on path length cost.",
+    default_value: 1.0,
+    validation: {
+      gt_eq<>: [0.0]
+    }
+  }
   num_collision_check_points: {
     type: int,
-    description: "Number of collision checks to perform along the trajectory.",
+    description: "Number of points on the path on which to perform collision checks.",
     default_value: 25,
     validation: {
       gt_eq<>: [2]
@@ -46,24 +78,32 @@ ktopt_interface:
   }
   num_position_constraint_points: {
     type: int,
-    description: "Number of points on the path that moveit's bounding box constraint needs to be imposed",
+    description: "Number of points on the path where MoveIt's bounding box constraint needs to be imposed.",
     default_value: 10,
+    validation: {
+      gt_eq<>: [2]
+    }
+  }
+  position_constraint_padding: {
+    type: double,
+    description: "Padding distance for position constraints, in meters, to make sure optimizing at sampled points still globally meets constraints.",
+    default_value: 0.005,
     validation: {
       gt_eq<>: [0.0]
     }
   }
   num_orientation_constraint_points: {
     type: int,
-    description: "Number of points on the path where moveit's orientation constraint needs to be imposed",
+    description: "Number of points on the path where MoveIt's orientation constraint needs to be imposed.",
     default_value: 10,
     validation: {
-      gt_eq<>: [0.0]
+      gt_eq<>: [2]
     }
   }
-  joint_jerk_bound: {
+  orientation_constraint_padding: {
     type: double,
-    description: "Maximum jerk that is allowed for generated trajectory",
-    default_value: 1.0,
+    description: "Padding distance for orientation constraints, in radians, to make sure optimizing at sampled points still globally meets constraints.",
+    default_value: 0.005,
     validation: {
       gt_eq<>: [0.0]
     }

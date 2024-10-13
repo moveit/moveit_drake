@@ -50,76 +50,21 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const moveit::core::RobotState start_state(*getPlanningScene()->getCurrentStateUpdated(req.start_state));
   const auto joint_model_group = getPlanningScene()->getRobotModel()->getJointModelGroup(getGroupName());
   RCLCPP_INFO_STREAM(getLogger(), "Planning for group: " << getGroupName());
-  const int num_positions = plant.num_positions();
-  const int num_velocities = plant.num_velocities();
-  // const auto link_ee = params_.link_ee;
-  // const auto& link_ee_frame = plant.GetFrameByName(link_ee);
 
-  // extract position and velocity bounds
-  std::vector<double> lower_position_bounds;
-  std::vector<double> upper_position_bounds;
-  std::vector<double> lower_velocity_bounds;
-  std::vector<double> upper_velocity_bounds;
-  std::vector<double> lower_acceleration_bounds;
-  std::vector<double> upper_acceleration_bounds;
-  std::vector<double> lower_jerk_bounds;
-  std::vector<double> upper_jerk_bounds;
-  lower_position_bounds.reserve(num_positions);
-  upper_position_bounds.reserve(num_positions);
-  lower_velocity_bounds.reserve(num_positions);
-  upper_velocity_bounds.reserve(num_positions);
-  lower_acceleration_bounds.reserve(num_positions);
-  upper_acceleration_bounds.reserve(num_positions);
-  lower_jerk_bounds.reserve(num_positions);
-  upper_jerk_bounds.reserve(num_positions);
+  // Get velocity and acceleration bounds
+  Eigen::VectorXd lower_position_bounds;
+  Eigen::VectorXd upper_position_bounds;
+  Eigen::VectorXd lower_velocity_bounds;
+  Eigen::VectorXd upper_velocity_bounds;
+  Eigen::VectorXd lower_acceleration_bounds;
+  Eigen::VectorXd upper_acceleration_bounds;
+  Eigen::VectorXd lower_jerk_bounds;
+  Eigen::VectorXd upper_jerk_bounds;
 
-  const auto& all_joint_models = joint_model_group->getJointModels();
-  for (const auto& joint_model : all_joint_models)
-  {
-    const auto& joint_name = joint_model->getName();
-    const bool is_active = joint_model_group->hasJointModel(joint_name);
-
-    if (is_active)
-    {
-      // Set bounds for active joints
-      const auto& bounds = joint_model->getVariableBounds()[0];
-      lower_position_bounds.push_back(bounds.min_position_);
-      upper_position_bounds.push_back(bounds.max_position_);
-      lower_velocity_bounds.push_back(-bounds.max_velocity_);
-      upper_velocity_bounds.push_back(bounds.max_velocity_);
-      lower_acceleration_bounds.push_back(-bounds.max_acceleration_);
-      upper_acceleration_bounds.push_back(bounds.max_acceleration_);
-      lower_jerk_bounds.push_back(-params_.joint_jerk_bound);
-      upper_jerk_bounds.push_back(params_.joint_jerk_bound);
-    }
-    else
-    {
-      // Set default values for inactive joints
-      lower_position_bounds.push_back(-kDefaultJointMaxPosition);
-      upper_position_bounds.push_back(kDefaultJointMaxPosition);
-      lower_velocity_bounds.push_back(0.0);
-      upper_velocity_bounds.push_back(0.0);
-      lower_acceleration_bounds.push_back(0.0);
-      upper_acceleration_bounds.push_back(0.0);
-      lower_jerk_bounds.push_back(0.0);
-      upper_jerk_bounds.push_back(0.0);
-    }
-  }
-
-  Eigen::Map<const Eigen::VectorXd> lower_position_bounds_eigen(lower_position_bounds.data(),
-                                                                lower_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_position_bounds_eigen(upper_position_bounds.data(),
-                                                                upper_position_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_velocity_bounds_eigen(lower_velocity_bounds.data(),
-                                                                lower_velocity_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_velocity_bounds_eigen(upper_velocity_bounds.data(),
-                                                                upper_velocity_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_acceleration_bounds_eigen(lower_acceleration_bounds.data(),
-                                                                    lower_acceleration_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_acceleration_bounds_eigen(upper_acceleration_bounds.data(),
-                                                                    upper_acceleration_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> lower_jerk_bounds_eigen(lower_jerk_bounds.data(), lower_jerk_bounds.size());
-  Eigen::Map<const Eigen::VectorXd> upper_jerk_bounds_eigen(upper_jerk_bounds.data(), upper_jerk_bounds.size());
+  moveit::drake::getPositionBounds(joint_model_group, plant, lower_position_bounds, upper_position_bounds);
+  moveit::drake::getVelocityBounds(joint_model_group, plant, lower_velocity_bounds, upper_velocity_bounds);
+  moveit::drake::getAccelerationBounds(joint_model_group, plant, lower_acceleration_bounds, upper_acceleration_bounds);
+  moveit::drake::getJerkBounds(joint_model_group, plant, lower_jerk_bounds, upper_jerk_bounds);
 
   // q represents the complete state (joint positions and velocities)
   VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
@@ -144,18 +89,12 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   auto trajopt = KinematicTrajectoryOptimization(plant.num_positions(), params_.num_control_points);
   auto& prog = trajopt.get_mutable_prog();
 
-  // Costs
-  // TODO: These should be parameters
-  trajopt.AddDurationCost(1.0);
-  trajopt.AddPathLengthCost(1.0);
-
+  // Add costs
+  trajopt.AddDurationCost(params_.duration_cost_weight);
+  trajopt.AddPathLengthCost(params_.path_length_cost_weight);
   // TODO: Adds quadratic cost
   // This acts as a secondary cost to push the solution towards joint centers
-  // prog.AddQuadraticErrorCost(
-  //   MatrixXd::Identity(joints.size(), joints.size()),
-  //   nominal_q_;
-  // );
-  // prog.AddQuadraticErrorCost();
+  // prog.AddQuadraticErrorCost(MatrixXd::Identity(plant.num_positions(), plant.num_positions()), nominal_q_, prog.control_points());
 
   // Constraints
   // Add constraints on start joint configuration and velocity
@@ -169,18 +108,23 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   const auto& goal_velocity = moveit::drake::getJointVelocityVector(goal_state, getGroupName(), plant);
   trajopt.AddPathVelocityConstraint(goal_velocity, goal_velocity, 1.0);
 
-  // TODO: Add constraints on joint position/velocity/acceleration
-  trajopt.AddPositionBounds(lower_position_bounds_eigen, upper_position_bounds_eigen);
-  trajopt.AddVelocityBounds(lower_velocity_bounds_eigen, upper_velocity_bounds_eigen);
-  trajopt.AddAccelerationBounds(lower_acceleration_bounds_eigen, upper_acceleration_bounds_eigen);
-  trajopt.AddJerkBounds(lower_jerk_bounds_eigen, upper_jerk_bounds_eigen);
+  // Add constraints on joint kinematic limits.
+  trajopt.AddPositionBounds(lower_position_bounds, upper_position_bounds);
+  trajopt.AddVelocityBounds(lower_velocity_bounds, upper_velocity_bounds);
+  trajopt.AddAccelerationBounds(lower_acceleration_bounds, upper_acceleration_bounds);
+  trajopt.AddJerkBounds(lower_jerk_bounds, upper_jerk_bounds);
 
   // Add constraints on duration
-  // TODO: These should be parameters
-  trajopt.AddDurationConstraint(0.5, 5);
+  if (params_.min_trajectory_time > params_.max_trajectory_time)
+  {
+    RCLCPP_ERROR(getLogger(), "Minimum trajectory time cannot be greater than maximum trajectory time.");
+    res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
+    return;
+  }
+  trajopt.AddDurationConstraint(params_.min_trajectory_time, params_.max_trajectory_time);
 
   // process path_constraints
-  addPathPositionConstraints(trajopt, plant, plant_context);
+  addPathPositionConstraints(trajopt, plant, plant_context, params_.position_constraint_padding);
 
   // solve the program
   auto result = Solve(prog);
@@ -215,29 +159,29 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, plant, res.trajectory);
 
   // Visualize the trajectory with Meshcat
-  visualizer_->StartRecording();
-  const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
-  for (unsigned int i = 0; i < num_pts; ++i)
-  {
-    const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
-    const auto t = std::min(t_scale, 1.0) * traj.end_time();
-    plant.SetPositions(&plant_context, traj.value(t));
-    auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
-    visualizer_->ForcedPublish(vis_context);
-    // Without these sleeps, the visualizer won't give you time to load your
-    // browser
-    // TODO: This should not hold up planning time
-    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
-  }
-  visualizer_->StopRecording();
-  visualizer_->PublishRecording();
+  // visualizer_->StartRecording();
+  // const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
+  // for (unsigned int i = 0; i < num_pts; ++i)
+  // {
+  //   const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+  //   const auto t = std::min(t_scale, 1.0) * traj.end_time();
+  //   plant.SetPositions(&plant_context, traj.value(t));
+  //   auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+  //   visualizer_->ForcedPublish(vis_context);
+  //   // Without these sleeps, the visualizer won't give you time to load your
+  //   // browser
+  //   // TODO: This should not hold up planning time
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
+  // }
+  // visualizer_->StopRecording();
+  // visualizer_->PublishRecording();
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
 }
 
 void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt,
                                                       const MultibodyPlant<double>& plant,
-                                                      Context<double>& plant_context)
+                                                      Context<double>& plant_context, const double padding)
 {
   // retrieve the motion planning request
   const auto& req = getMotionPlanRequest();
@@ -254,14 +198,28 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
       // Extract dimensions of the bounding box from
       // constraint_region.primitives Assuming it is a box
       // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
-      const auto link_ee = position_constraint.link_name;
-      if (!plant.HasBodyNamed(link_ee))
+      const auto link_ee_name = position_constraint.link_name;
+      if (!plant.HasBodyNamed(link_ee_name))
       {
-        RCLCPP_ERROR(getLogger(), "The link specified in the PositionConstraint message does not exist in the Drake "
-                                  "plant, please check your URDF");
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     link_ee_name.c_str());
         continue;
       }
-      const auto& link_ee_frame = plant.GetFrameByName(link_ee);
+      const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
+
+      const auto base_frame_name = position_constraint.header.frame_id;
+      if (!plant.HasBodyNamed(base_frame_name))
+      {
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     base_frame_name.c_str());
+        continue;
+      }
+      const auto& base_frame = plant.GetFrameByName(base_frame_name);
+
       const auto& primitive = position_constraint.constraint_region.primitives[0];
       if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
       {
@@ -269,20 +227,19 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
         continue;
       }
 
-      double x_dim = primitive.dimensions[0] / 2.0;
-      double y_dim = primitive.dimensions[1] / 2.0;
-      double z_dim = primitive.dimensions[2] / 2.0;
-
       // Calculate the lower and upper bounds based on the box dimensions
       // around the center
-      Eigen::Vector3d lower_bound = box_center - Eigen::Vector3d(x_dim, y_dim, z_dim);
-      Eigen::Vector3d upper_bound = box_center + Eigen::Vector3d(x_dim, y_dim, z_dim);
+      const auto offset_vec = Eigen::Vector3d(std::max(0.0, primitive.dimensions[0] / 2.0 - padding),
+                                              std::max(0.0, primitive.dimensions[1] / 2.0 - padding),
+                                              std::max(0.0, primitive.dimensions[2] / 2.0 - padding));
+      const auto lower_bound = box_center - offset_vec;
+      const auto upper_bound = box_center + offset_vec;
 
       // Add position constraint to each knot point of the trajectory
       for (int i = 0; i < params_.num_position_constraint_points; ++i)
       {
         trajopt.AddPathPositionConstraint(
-            std::make_shared<PositionConstraint>(&plant, plant.world_frame(), lower_bound, upper_bound, link_ee_frame,
+            std::make_shared<PositionConstraint>(&plant, base_frame, lower_bound, upper_bound, link_ee_frame,
                                                  Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
             static_cast<double>(i) / (params_.num_position_constraint_points - 1));
       }

@@ -74,6 +74,18 @@ namespace moveit::drake
                                                      const ::drake::multibody::MultibodyPlant<double>& plant);
 
 /**
+ * @brief Copy position bounds from joint model group to Eigen vectors
+ *
+ * @param joint_model_group Joint model group to get position bounds from
+ * @param plant Drake MultiBody Plant, used to get model information
+ * @param lower_position_bounds Lower position bounds populated by this function
+ * @param upper_position_bounds Upper position bounds populated by this function
+ */
+void getPositionBounds(const moveit::core::JointModelGroup* joint_model_group,
+                       const ::drake::multibody::MultibodyPlant<double>& plant, Eigen::VectorXd& lower_position_bounds,
+                       Eigen::VectorXd& upper_position_bounds);
+
+/**
  * @brief Copy velocity bounds from joint model group to Eigen vectors
  *
  * @param joint_model_group Joint model group to get velocity bounds from
@@ -96,6 +108,18 @@ void getVelocityBounds(const moveit::core::JointModelGroup* joint_model_group,
 void getAccelerationBounds(const moveit::core::JointModelGroup* joint_model_group,
                            const ::drake::multibody::MultibodyPlant<double>& plant,
                            Eigen::VectorXd& lower_acceleration_bounds, Eigen::VectorXd& upper_acceleration_bounds);
+
+/**
+ * @brief Get the Jerk Bounds object
+ *
+ * @param joint_model_group Joint model group to get jerk bounds from
+ * @param plant Drake model plant, used to get model information
+ * @param lower_jerk_bounds Lower jerk bounds populated by this function
+ * @param upper_jerk_bounds Upper jerk bounds populated by this function
+ */
+void getJerkBounds(const moveit::core::JointModelGroup* joint_model_group,
+                   const ::drake::multibody::MultibodyPlant<double>& plant, Eigen::VectorXd& lower_jerk_bounds,
+                   Eigen::VectorXd& upper_jerk_bounds);
 
 /**
  * @brief Create a Piecewise Polynomial from a moveit trajectory (see
