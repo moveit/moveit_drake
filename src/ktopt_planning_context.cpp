@@ -159,22 +159,27 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getRobotTrajectory(traj, params_.trajectory_time_step, plant, res.trajectory);
 
   // Visualize the trajectory with Meshcat
-  // visualizer_->StartRecording();
-  // const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
-  // for (unsigned int i = 0; i < num_pts; ++i)
-  // {
-  //   const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
-  //   const auto t = std::min(t_scale, 1.0) * traj.end_time();
-  //   plant.SetPositions(&plant_context, traj.value(t));
-  //   auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
-  //   visualizer_->ForcedPublish(vis_context);
-  //   // Without these sleeps, the visualizer won't give you time to load your
-  //   // browser
-  //   // TODO: This should not hold up planning time
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
-  // }
-  // visualizer_->StopRecording();
-  // visualizer_->PublishRecording();
+
+  // TODO: add to conversions
+  if (params_.meshcat_visualise)
+  {
+    visualizer_->StartRecording();
+    const auto num_pts = static_cast<size_t>(std::ceil(traj.end_time() / params_.trajectory_time_step) + 1);
+    for (unsigned int i = 0; i < num_pts; ++i)
+    {
+      const auto t_scale = static_cast<double>(i) / static_cast<double>(num_pts - 1);
+      const auto t = std::min(t_scale, 1.0) * traj.end_time();
+      plant.SetPositions(&plant_context, traj.value(t));
+      auto& vis_context = visualizer_->GetMyContextFromRoot(*diagram_context_);
+      visualizer_->ForcedPublish(vis_context);
+      // Without these sleeps, the visualizer won't give you time to load your
+      // browser
+      // TODO: This should not hold up planning time
+      std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(params_.trajectory_time_step * 10000.0)));
+    }
+    visualizer_->StopRecording();
+    visualizer_->PublishRecording();
+  }
   res.error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
   return;
 }
