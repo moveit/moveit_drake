@@ -125,6 +125,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   // process path_constraints
   addPathPositionConstraints(trajopt, plant, plant_context, params_.position_constraint_padding);
+  addPathOrientationConstraints(trajopt, plant, plant_context, params_.orientation_constraint_padding);
 
   // solve the program
   auto result = Solve(prog);
@@ -246,6 +247,73 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
         trajopt.AddPathPositionConstraint(
             std::make_shared<PositionConstraint>(&plant, base_frame, lower_bound, upper_bound, link_ee_frame,
                                                  Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
+            static_cast<double>(i) / (params_.num_position_constraint_points - 1));
+      }
+    }
+  }
+}
+
+void KTOptPlanningContext::addPathOrientationConstraints(KinematicTrajectoryOptimization& trajopt,
+                                                         const MultibodyPlant<double>& plant,
+                                                         Context<double>& plant_context, const double padding)
+{
+  // retrieve the motion planning request
+  const auto& req = getMotionPlanRequest();
+
+  // check for path position constraints
+  if (!req.path_constraints.orientation_constraints.empty())
+  {
+    for (const auto& orientation_constraint : req.path_constraints.orientation_constraints)
+    {
+      // NOTE: Current thesis, when you apply a Drake Orientation Constraint it
+      // expects the following
+      // Frame A: The frame in which the orientation constraint is defined
+      // Frame B: The frame to which the orientation constraint is enforced
+      // theta_bound: The angle difference between frame A's orientation and
+      //              frame B's orientation
+
+      // Extract FrameA and FrameB for orientation constraint
+      // frame A
+      const auto link_ee_name = orientation_constraint.link_name;
+      if (!plant.HasBodyNamed(link_ee_name))
+      {
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     link_ee_name.c_str());
+        continue;
+      }
+      const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
+
+      // frame B
+      const auto base_frame_name = orientation_constraint.header.frame_id;
+      if (!plant.HasBodyNamed(base_frame_name))
+      {
+        RCLCPP_ERROR(getLogger(),
+                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                     "plant.",
+                     base_frame_name.c_str());
+        continue;
+      }
+      const auto& base_frame = plant.GetFrameByName(base_frame_name);
+
+      // Extract the orientation of that Frame B needs to be constrained to w.r.t Frame A
+      const auto& constrained_orientation = orientation_constraint.orientation;
+      // convert to drake's RotationMatrix
+      const auto R_BbarB = RotationMatrixd(Eigen::Quaterniond(constrained_orientation.w, constrained_orientation.x,
+                                                              constrained_orientation.y, constrained_orientation.z));
+
+      // NOTE: There are 3 tolerances given for the orientation constraint in moveit
+      // message, rake only takes in a single theta bound. For now, we take any
+      // of the tolerances as the theta bound
+      const double theta_bound = orientation_constraint.absolute_x_axis_tolerance;
+
+      // Add position constraint to each knot point of the trajectory
+      for (int i = 0; i < params_.num_orientation_constraint_points; ++i)
+      {
+        trajopt.AddPathPositionConstraint(
+            std::make_shared<OrientationConstraint>(&plant, base_frame, RotationMatrixd::Identity(), link_ee_frame,
+                                                    R_BbarB, padding, &plant_context),
             static_cast<double>(i) / (params_.num_position_constraint_points - 1));
       }
     }

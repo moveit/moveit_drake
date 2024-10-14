@@ -25,6 +25,7 @@
 #include "drake/visualization/visualization_config_functions.h"
 #include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
 #include <drake/multibody/inverse_kinematics/position_constraint.h>
+#include <drake/multibody/inverse_kinematics/orientation_constraint.h>
 
 namespace ktopt_interface
 {
@@ -49,10 +50,12 @@ using drake::geometry::Shape;
 using drake::geometry::SourceId;
 using drake::geometry::Sphere;
 using drake::math::RigidTransformd;
+using drake::math::RotationMatrixd;
 using drake::multibody::AddMultibodyPlantSceneGraph;
 using drake::multibody::Frame;
 using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
+using drake::multibody::OrientationConstraint;
 using drake::multibody::PackageMap;
 using drake::multibody::Parser;
 using drake::multibody::PositionConstraint;
@@ -84,6 +87,8 @@ public:
   void transcribePlanningScene(const planning_scene::PlanningScene& planning_scene);
   void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
                                   Context<double>& plant_context, const double padding);
+  void addPathOrientationConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
+                                     Context<double>& plant_context, const double padding);
 
 private:
   const ktopt_interface::Params params_;
