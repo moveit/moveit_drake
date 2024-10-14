@@ -12,10 +12,11 @@ ENV WORKSPACE=${ROS_UNDERLAY}/..
 COPY . ${WORKSPACE}/src/moveit_drake
 
 RUN apt-get update && \
-    apt upgrade && \
+    apt upgrade -y && \
     apt install wget -y && \
     wget https://github.com/RobotLocomotion/drake/releases/download/v1.30.0/drake-dev_1.30.0-1_amd64-noble.deb && \
-    apt install ./drake-dev_1.30.0-1_amd64-noble.deb -y
+    apt install ./drake-dev_1.30.0-1_amd64-noble.deb -y && \
+    rm -rf ./drake-dev_1.30.0-1_amd64-noble.deb
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
     cd ${WORKSPACE}/src && \
