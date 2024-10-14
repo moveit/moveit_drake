@@ -24,8 +24,7 @@ rich specification of constraints and costs provided by `drake`.
 
 ### Steps
 The following steps clone and build the base image that you will require to
-test/build/run/develop with the repo (and will take some time, as it builds
-moveit)
+test/build/run/develop with the repo
 
     git clone https://github.com/moveit/moveit_drake.git
     cd moveit_drake
@@ -62,10 +61,11 @@ Download the MoveIt Tutorials source code:
     vcs import < moveit_drake/moveit_drake.repos
     rosdep install -r --from-paths . --ignore-src --rosdistro ${ROS_DISTRO} -y
 
-Configure and build the workspace:
+Configure and build the workspace (this will take some time, as it builds
+moveit):
 
     cd ${WORKSPACE}
-    colcon build --event-handlers desktop_notification- status- --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --event-handlers desktop_notification- status- --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers 1
 
 ### Run the demo
 
