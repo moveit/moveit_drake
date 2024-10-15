@@ -10,7 +10,7 @@ This allows the user to setup motion planning as an optimization problem within 
 ## Features
 
 - Exposes [`KinematicTrajectoryOptimization`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1planning_1_1trajectory__optimization_1_1_kinematic_trajectory_optimization.html) implementation in `drake` as a motion planner.
-- Exposes [`TOPPRA`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html) implementation in `drake` as a trajectory post-processor.
+- Exposes [`TOPPRA`](https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html) implementation in `drake` as a trajectory post-processing adapter.
 
 ## Docker Workflow (Preferred and tested)
 
