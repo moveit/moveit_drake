@@ -11,17 +11,13 @@
 #include <drake/planning/trajectory_optimization/kinematic_trajectory_optimization.h>
 #include <drake/systems/framework/diagram.h>
 #include <drake/systems/framework/diagram_builder.h>
-#include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
-#include <drake/multibody/inverse_kinematics/position_constraint.h>
 #include <drake/multibody/parsing/parser.h>
 #include <drake/multibody/plant/multibody_plant.h>
 
 namespace ktopt_interface
 {
 // declare all namespaces to be used
-using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
-using drake::multibody::PositionConstraint;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::systems::Context;
 using drake::systems::Diagram;
@@ -90,6 +86,18 @@ public:
    */
   void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
                                   Context<double>& plant_context, const double padding);
+
+  /**
+   * @brief Adds path orientation constraints, if any, to the planning problem.
+   * @param trajopt The Drake object containing the trajectory optimization problem.
+   * @param plant The Drake multibody plant to use for planning.
+   * @param plant_context The context associated with the multibody plant.
+   * @param padding Additional orientation padding on the MoveIt constraint, in radians.
+   * This ensures that constraints are more likely to hold for the entire trajectory, since the
+   * Drake mathematical program only optimizes constraints at discrete points along the path.
+   */
+  void addPathOrientationConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
+                                     Context<double>& plant_context, const double padding);
 
 private:
   /// @brief The ROS parameters associated with this motion planner.

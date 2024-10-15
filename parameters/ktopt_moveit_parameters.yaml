@@ -76,10 +76,18 @@ ktopt_interface:
       gt_eq<>: [0.0]
     }
   }
-  num_position_constraint_points: {
+  num_position_inequality_points: {
     type: int,
     description: "Number of points on the path where MoveIt's bounding box constraint needs to be imposed.",
     default_value: 10,
+    validation: {
+      gt_eq<>: [2]
+    }
+  }
+  num_position_equality_points: {
+    type: int,
+    description: "Number of points on the path where MoveIt's equality position constraint needs to be imposed.",
+    default_value: 25,
     validation: {
       gt_eq<>: [2]
     }
