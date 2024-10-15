@@ -83,7 +83,7 @@ rclcpp::Logger getLogger()
 }
 }  // namespace
 /**
- * @brief Post-processing adapter that timeparametermizes a trajectory based on reachability analysis. For details see
+ * @brief Post-processing adapter that time-parameterizes a trajectory based on reachability analysis. For details see
  * https://drake.mit.edu/doxygen_cxx/classdrake_1_1multibody_1_1_toppra.html
  *
  */
@@ -152,7 +152,7 @@ public:
       return;
     }
 
-    // Update plan from planning scene
+    // Update Drake plant from MoveIt planning scene
     auto& plant = diagram_->GetDowncastSubsystemByName<MultibodyPlant<double>>("plant");
     auto& plant_context = diagram_->GetMutableSubsystemContext(plant, diagram_context_.get());
     Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
