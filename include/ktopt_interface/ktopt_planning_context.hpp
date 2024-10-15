@@ -11,16 +11,12 @@
 #include <drake/planning/trajectory_optimization/kinematic_trajectory_optimization.h>
 #include <drake/systems/framework/diagram.h>
 #include <drake/systems/framework/diagram_builder.h>
-#include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
-#include <drake/multibody/inverse_kinematics/orientation_constraint.h>
-#include <drake/multibody/inverse_kinematics/position_constraint.h>
 #include <drake/multibody/parsing/parser.h>
 #include <drake/multibody/plant/multibody_plant.h>
 
 namespace ktopt_interface
 {
 // declare all namespaces to be used
-using drake::multibody::MinimumDistanceLowerBoundConstraint;
 using drake::multibody::MultibodyPlant;
 using drake::planning::trajectory_optimization::KinematicTrajectoryOptimization;
 using drake::systems::Context;

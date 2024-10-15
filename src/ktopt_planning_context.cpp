@@ -5,6 +5,9 @@
 #include <drake/geometry/geometry_instance.h>
 #include <drake/geometry/geometry_roles.h>
 #include <drake/geometry/proximity_properties.h>
+#include <drake/multibody/inverse_kinematics/minimum_distance_lower_bound_constraint.h>
+#include <drake/multibody/inverse_kinematics/orientation_constraint.h>
+#include <drake/multibody/inverse_kinematics/position_constraint.h>
 #include <drake/solvers/solve.h>
 #include <drake/visualization/visualization_config.h>
 #include <drake/visualization/visualization_config_functions.h>
@@ -78,7 +81,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getJerkBounds(joint_model_group, plant, lower_jerk_bounds, upper_jerk_bounds);
 
   // q represents the complete state (joint positions and velocities)
-  auto q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+  Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
   q << moveit::drake::getJointPositionVector(start_state, getGroupName(), plant);
   q << moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant);
 
@@ -156,7 +159,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // add collision constraints
   for (int s = 0; s < params_.num_collision_check_points; ++s)
   {
-    trajopt.AddPathPositionConstraint(std::make_shared<MinimumDistanceLowerBoundConstraint>(
+    trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::MinimumDistanceLowerBoundConstraint>(
                                           &plant, params_.collision_check_lower_distance_bound, &plant_context),
                                       static_cast<double>(s) / (params_.num_collision_check_points - 1));
   }
@@ -205,62 +208,59 @@ void KTOptPlanningContext::addPathPositionConstraints(KinematicTrajectoryOptimiz
   const auto& req = getMotionPlanRequest();
 
   // check for path position constraints
-  if (!req.path_constraints.position_constraints.empty())
+  for (const auto& position_constraint : req.path_constraints.position_constraints)
   {
-    for (const auto& position_constraint : req.path_constraints.position_constraints)
+    // Extract the bounding box's center (primitive pose)
+    const auto& primitive_pose = position_constraint.constraint_region.primitive_poses[0];
+    Eigen::Vector3d box_center(primitive_pose.position.x, primitive_pose.position.y, primitive_pose.position.z);
+
+    // Extract dimensions of the bounding box from
+    // constraint_region.primitives Assuming it is a box
+    // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
+    const auto link_ee_name = position_constraint.link_name;
+    if (!plant.HasBodyNamed(link_ee_name))
     {
-      // Extract the bounding box's center (primitive pose)
-      const auto& primitive_pose = position_constraint.constraint_region.primitive_poses[0];
-      Eigen::Vector3d box_center(primitive_pose.position.x, primitive_pose.position.y, primitive_pose.position.z);
+      RCLCPP_ERROR(getLogger(),
+                   "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                   "plant.",
+                   link_ee_name.c_str());
+      continue;
+    }
+    const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
 
-      // Extract dimensions of the bounding box from
-      // constraint_region.primitives Assuming it is a box
-      // (shape_msgs::SolidPrimitive::BOX) and has dimensions in [x, y, z]
-      const auto link_ee_name = position_constraint.link_name;
-      if (!plant.HasBodyNamed(link_ee_name))
-      {
-        RCLCPP_ERROR(getLogger(),
-                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
-                     "plant.",
-                     link_ee_name.c_str());
-        continue;
-      }
-      const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
+    const auto base_frame_name = position_constraint.header.frame_id;
+    if (!plant.HasBodyNamed(base_frame_name))
+    {
+      RCLCPP_ERROR(getLogger(),
+                   "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
+                   "plant.",
+                   base_frame_name.c_str());
+      continue;
+    }
+    const auto& base_frame = plant.GetFrameByName(base_frame_name);
 
-      const auto base_frame_name = position_constraint.header.frame_id;
-      if (!plant.HasBodyNamed(base_frame_name))
-      {
-        RCLCPP_ERROR(getLogger(),
-                     "The link specified in the PositionConstraint message, %s, does not exist in the Drake "
-                     "plant.",
-                     base_frame_name.c_str());
-        continue;
-      }
-      const auto& base_frame = plant.GetFrameByName(base_frame_name);
+    const auto& primitive = position_constraint.constraint_region.primitives[0];
+    if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
+    {
+      RCLCPP_WARN(getLogger(), "Expects a bounding box constraint as a SolidPrimitive::BOX");
+      continue;
+    }
 
-      const auto& primitive = position_constraint.constraint_region.primitives[0];
-      if (primitive.type != shape_msgs::msg::SolidPrimitive::BOX)
-      {
-        RCLCPP_WARN(getLogger(), "Expects a bounding box constraint as a SolidPrimitive::BOX");
-        continue;
-      }
+    // Calculate the lower and upper bounds based on the box dimensions
+    // around the center
+    const auto offset_vec = Eigen::Vector3d(std::max(0.0, primitive.dimensions[0] / 2.0 - padding),
+                                            std::max(0.0, primitive.dimensions[1] / 2.0 - padding),
+                                            std::max(0.0, primitive.dimensions[2] / 2.0 - padding));
+    const auto lower_bound = box_center - offset_vec;
+    const auto upper_bound = box_center + offset_vec;
 
-      // Calculate the lower and upper bounds based on the box dimensions
-      // around the center
-      const auto offset_vec = Eigen::Vector3d(std::max(0.0, primitive.dimensions[0] / 2.0 - padding),
-                                              std::max(0.0, primitive.dimensions[1] / 2.0 - padding),
-                                              std::max(0.0, primitive.dimensions[2] / 2.0 - padding));
-      const auto lower_bound = box_center - offset_vec;
-      const auto upper_bound = box_center + offset_vec;
-
-      // Add position constraint to each knot point of the trajectory
-      for (int i = 0; i < params_.num_position_constraint_points; ++i)
-      {
-        trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::PositionConstraint>(
-                                              &plant, base_frame, lower_bound, upper_bound, link_ee_frame,
-                                              Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
-                                          static_cast<double>(i) / (params_.num_position_constraint_points - 1));
-      }
+    // Add position constraint to each knot point of the trajectory
+    for (int i = 0; i < params_.num_position_constraint_points; ++i)
+    {
+      trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::PositionConstraint>(
+                                            &plant, base_frame, lower_bound, upper_bound, link_ee_frame,
+                                            Eigen::Vector3d(0.0, 0.0, 0.0), &plant_context),
+                                        static_cast<double>(i) / (params_.num_position_constraint_points - 1));
     }
   }
 }
@@ -273,61 +273,58 @@ void KTOptPlanningContext::addPathOrientationConstraints(KinematicTrajectoryOpti
   const auto& req = getMotionPlanRequest();
 
   // check for path position constraints
-  if (!req.path_constraints.orientation_constraints.empty())
+  for (const auto& orientation_constraint : req.path_constraints.orientation_constraints)
   {
-    for (const auto& orientation_constraint : req.path_constraints.orientation_constraints)
+    // NOTE: Current thesis, when you apply a Drake Orientation Constraint it
+    // expects the following
+    // Frame A: The frame in which the orientation constraint is defined
+    // Frame B: The frame to which the orientation constraint is enforced
+    // theta_bound: The angle difference between frame A's orientation and
+    //              frame B's orientation
+
+    // Extract FrameA and FrameB for orientation constraint
+    // frame A
+    const auto link_ee_name = orientation_constraint.link_name;
+    if (!plant.HasBodyNamed(link_ee_name))
     {
-      // NOTE: Current thesis, when you apply a Drake Orientation Constraint it
-      // expects the following
-      // Frame A: The frame in which the orientation constraint is defined
-      // Frame B: The frame to which the orientation constraint is enforced
-      // theta_bound: The angle difference between frame A's orientation and
-      //              frame B's orientation
+      RCLCPP_ERROR(getLogger(),
+                   "The link specified in the OrientationConstraint message, %s, does not exist in the Drake "
+                   "plant.",
+                   link_ee_name.c_str());
+      continue;
+    }
+    const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
 
-      // Extract FrameA and FrameB for orientation constraint
-      // frame A
-      const auto link_ee_name = orientation_constraint.link_name;
-      if (!plant.HasBodyNamed(link_ee_name))
-      {
-        RCLCPP_ERROR(getLogger(),
-                     "The link specified in the OrientationConstraint message, %s, does not exist in the Drake "
-                     "plant.",
-                     link_ee_name.c_str());
-        continue;
-      }
-      const auto& link_ee_frame = plant.GetFrameByName(link_ee_name);
+    // frame B
+    const auto base_frame_name = orientation_constraint.header.frame_id;
+    if (!plant.HasBodyNamed(base_frame_name))
+    {
+      RCLCPP_ERROR(getLogger(),
+                   "The link specified in the OrientationConstraint message, %s, does not exist in the Drake "
+                   "plant.",
+                   base_frame_name.c_str());
+      continue;
+    }
+    const auto& base_frame = plant.GetFrameByName(base_frame_name);
 
-      // frame B
-      const auto base_frame_name = orientation_constraint.header.frame_id;
-      if (!plant.HasBodyNamed(base_frame_name))
-      {
-        RCLCPP_ERROR(getLogger(),
-                     "The link specified in the OrientationConstraint message, %s, does not exist in the Drake "
-                     "plant.",
-                     base_frame_name.c_str());
-        continue;
-      }
-      const auto& base_frame = plant.GetFrameByName(base_frame_name);
+    // Extract the orientation of that Frame B needs to be constrained to w.r.t Frame A
+    const auto& constrained_orientation = orientation_constraint.orientation;
+    // convert to drake's RotationMatrix
+    const auto R_BbarB = drake::math::RotationMatrixd(Eigen::Quaterniond(
+        constrained_orientation.w, constrained_orientation.x, constrained_orientation.y, constrained_orientation.z));
 
-      // Extract the orientation of that Frame B needs to be constrained to w.r.t Frame A
-      const auto& constrained_orientation = orientation_constraint.orientation;
-      // convert to drake's RotationMatrix
-      const auto R_BbarB = drake::math::RotationMatrixd(Eigen::Quaterniond(
-          constrained_orientation.w, constrained_orientation.x, constrained_orientation.y, constrained_orientation.z));
+    // NOTE: There are 3 tolerances given for the orientation constraint in moveit
+    // message, Drake only takes in a single theta bound. For now, we take any
+    // of the tolerances as the theta bound
+    const double theta_bound = orientation_constraint.absolute_x_axis_tolerance;
 
-      // NOTE: There are 3 tolerances given for the orientation constraint in moveit
-      // message, Drake only takes in a single theta bound. For now, we take any
-      // of the tolerances as the theta bound
-      const double theta_bound = orientation_constraint.absolute_x_axis_tolerance;
-
-      // Add orientation constraint to each knot point of the trajectory
-      for (int i = 0; i < params_.num_orientation_constraint_points; ++i)
-      {
-        trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::OrientationConstraint>(
-                                              &plant, base_frame, drake::math::RotationMatrixd::Identity(),
-                                              link_ee_frame, R_BbarB, padding, &plant_context),
-                                          static_cast<double>(i) / (params_.num_position_constraint_points - 1));
-      }
+    // Add orientation constraint to each knot point of the trajectory
+    for (int i = 0; i < params_.num_orientation_constraint_points; ++i)
+    {
+      trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::OrientationConstraint>(
+                                            &plant, base_frame, drake::math::RotationMatrixd::Identity(), link_ee_frame,
+                                            R_BbarB, padding, &plant_context),
+                                        static_cast<double>(i) / (params_.num_position_constraint_points - 1));
     }
   }
 }
