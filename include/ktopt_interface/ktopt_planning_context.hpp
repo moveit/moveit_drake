@@ -81,7 +81,7 @@ public:
 
   /**
    * @brief Adds path position constraints, if any, to the planning problem.
-   * @param trajopt The Drake mathematical program containing the trajectory optimization problem.
+   * @param trajopt The Drake object containing the trajectory optimization problem.
    * @param plant The Drake multibody plant to use for planning.
    * @param plant_context The context associated with the multibody plant.
    * @param padding Additional position padding on the MoveIt constraint, in meters.

@@ -78,7 +78,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getJerkBounds(joint_model_group, plant, lower_jerk_bounds, upper_jerk_bounds);
 
   // q represents the complete state (joint positions and velocities)
-  Eigen::VectorXd q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+  auto q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
   q << moveit::drake::getJointPositionVector(start_state, getGroupName(), plant);
   q << moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant);
 
