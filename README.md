@@ -54,7 +54,7 @@ Open a command line and navigate to your workspace:
 cd ${WORKSPACE}/src
 ```
 
-Download the MoveIt 2 Tutorials source code:
+Clone this repo to your workspace, including upstream dependencies:
 
 ```bash
 git clone https://github.com/moveit/moveit_drake.git
