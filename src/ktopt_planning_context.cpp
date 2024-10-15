@@ -1,24 +1,35 @@
 #include <cmath>
 
+#include <drake/geometry/meshcat_params.h>
+#include <drake/geometry/geometry_frame.h>
+#include <drake/geometry/geometry_instance.h>
+#include <drake/geometry/geometry_roles.h>
+#include <drake/geometry/proximity_properties.h>
+#include <drake/solvers/solve.h>
+#include <drake/visualization/visualization_config.h>
+#include <drake/visualization/visualization_config_functions.h>
+
 #include <moveit/constraint_samplers/constraint_sampler_manager.h>
 #include <moveit/drake/conversions.hpp>
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 
-#include "ktopt_interface/ktopt_planning_context.hpp"
+#include <ktopt_interface/ktopt_planning_context.hpp>
 
 namespace ktopt_interface
 {
 namespace
 {
+/// @brief Helper function that returns the logger instance associated with this planner.
+/// @return The logger instance.
 rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt_interface.planning_context");
 }
 
-constexpr double kDefaultJointMaxPosition = 1.0e6;
-
+/// @brief The namespace corresponding to the octomap in the planning scene.
+constexpr auto kOctomapNamespace = "<octomap>";
 }  // namespace
 
 KTOptPlanningContext::KTOptPlanningContext(const std::string& name, const std::string& group_name,
@@ -67,7 +78,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   moveit::drake::getJerkBounds(joint_model_group, plant, lower_jerk_bounds, upper_jerk_bounds);
 
   // q represents the complete state (joint positions and velocities)
-  VectorXd q = VectorXd::Zero(plant.num_positions() + plant.num_velocities());
+  auto q = Eigen::VectorXd::Zero(plant.num_positions() + plant.num_velocities());
   q << moveit::drake::getJointPositionVector(start_state, getGroupName(), plant);
   q << moveit::drake::getJointVelocityVector(start_state, getGroupName(), plant);
 
@@ -94,7 +105,8 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   trajopt.AddPathLengthCost(params_.path_length_cost_weight);
   // TODO: Adds quadratic cost
   // This acts as a secondary cost to push the solution towards joint centers
-  // prog.AddQuadraticErrorCost(MatrixXd::Identity(plant.num_positions(), plant.num_positions()), nominal_q_, prog.control_points());
+  // prog.AddQuadraticErrorCost(Eigen::MatrixXd::Identity(plant.num_positions(), plant.num_positions()), nominal_q_,
+  // prog.control_points());
 
   // Constraints
   // Add constraints on start joint configuration and velocity
@@ -127,7 +139,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   addPathPositionConstraints(trajopt, plant, plant_context, params_.position_constraint_padding);
 
   // solve the program
-  auto result = Solve(prog);
+  auto result = drake::solvers::Solve(prog);
 
   if (!result.is_success())
   {
@@ -258,7 +270,7 @@ bool KTOptPlanningContext::terminate()
   return true;
 }
 
-void KTOptPlanningContext::setRobotDescription(std::string robot_description)
+void KTOptPlanningContext::setRobotDescription(const std::string& robot_description)
 {
   robot_description_ = robot_description;
 
@@ -266,18 +278,18 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   builder = std::make_unique<DiagramBuilder<double>>();
 
   // meshcat experiment
-  const auto meshcat_params = MeshcatParams();
-  meshcat_ = std::make_shared<Meshcat>(meshcat_params);
+  const auto meshcat_params = drake::geometry::MeshcatParams();
+  meshcat_ = std::make_shared<drake::geometry::Meshcat>(meshcat_params);
 
-  auto [plant, scene_graph] = AddMultibodyPlantSceneGraph(builder.get(), 0.0);
+  auto [plant, scene_graph] = drake::multibody::AddMultibodyPlantSceneGraph(builder.get(), 0.0);
 
   // TODO:(kamiradi) Figure out object parsing
   // auto robot_instance = Parser(plant_,
   // scene_graph_).AddModelsFromString(robot_description_, ".urdf");
 
   const char* ModelUrl = params_.drake_robot_description.c_str();
-  const std::string urdf = PackageMap{}.ResolveUrl(ModelUrl);
-  auto robot_instance = Parser(&plant, &scene_graph).AddModels(urdf);
+  const std::string urdf = drake::multibody::PackageMap{}.ResolveUrl(ModelUrl);
+  auto robot_instance = drake::multibody::Parser(&plant, &scene_graph).AddModels(urdf);
   plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
 
   // planning scene transcription
@@ -288,12 +300,13 @@ void KTOptPlanningContext::setRobotDescription(std::string robot_description)
   plant.Finalize();
 
   // Apply MeshCat visualization
-  VisualizationConfig config;
-  ApplyVisualizationConfig(config, builder.get(), /*lcm_buses*/ nullptr, &plant, &scene_graph, meshcat_);
+  drake::visualization::VisualizationConfig config;
+  drake::visualization::ApplyVisualizationConfig(config, builder.get(), /*lcm_buses*/ nullptr, &plant, &scene_graph,
+                                                 meshcat_);
 
-  MeshcatVisualizerParams meshcat_viz_params;
-  auto& visualizer =
-      MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_, std::move(meshcat_viz_params));
+  drake::geometry::MeshcatVisualizerParams meshcat_viz_params;
+  auto& visualizer = drake::geometry::MeshcatVisualizer<double>::AddToBuilder(builder.get(), scene_graph, meshcat_,
+                                                                              std::move(meshcat_viz_params));
   visualizer_ = &visualizer;
 
   // in the future you can add other LeafSystems here. For now building the
@@ -320,7 +333,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
   {
     RCLCPP_ERROR_STREAM(getLogger(), "caught exception ... " << e.what());
   }
-  auto& scene_graph = builder->GetMutableDowncastSubsystemByName<SceneGraph<double>>("scene_graph");
+  auto& scene_graph = builder->GetMutableDowncastSubsystemByName<drake::geometry::SceneGraph<double>>("scene_graph");
   for (const auto& object : planning_scene.getWorld()->getObjectIds())
   {
     const auto& collision_object = planning_scene.getWorld()->getObject(object);
@@ -329,7 +342,7 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       RCLCPP_INFO(getLogger(), "No collision object");
       return;
     }
-    if (object == OCTOMAP_NS)
+    if (object == kOctomapNamespace)
     {
       RCLCPP_WARN(getLogger(), "Octomap not supported for now ... ");
       continue;
@@ -341,25 +354,26 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       const auto& pose = collision_object->pose_;
       const auto& shape_type = collision_object->shapes_[i]->type;
 
-      std::unique_ptr<Shape> shape_ptr;
+      std::unique_ptr<drake::geometry::Shape> shape_ptr;
       switch (shape_type)
       {
         case shapes::ShapeType::BOX:
         {
           const auto object_ptr = std::dynamic_pointer_cast<const shapes::Box>(shape);
-          shape_ptr = std::make_unique<Box>(object_ptr->size[0], object_ptr->size[1], object_ptr->size[2]);
+          shape_ptr =
+              std::make_unique<drake::geometry::Box>(object_ptr->size[0], object_ptr->size[1], object_ptr->size[2]);
           break;
         }
         case shapes::ShapeType::SPHERE:
         {
           const auto object_ptr = std::dynamic_pointer_cast<const shapes::Sphere>(shape);
-          shape_ptr = std::make_unique<Sphere>(object_ptr->radius);
+          shape_ptr = std::make_unique<drake::geometry::Sphere>(object_ptr->radius);
           break;
         }
         case shapes::ShapeType::CYLINDER:
         {
           const auto object_ptr = std::dynamic_pointer_cast<const shapes::Cylinder>(shape);
-          shape_ptr = std::make_unique<Cylinder>(object_ptr->radius, object_ptr->length);
+          shape_ptr = std::make_unique<drake::geometry::Cylinder>(object_ptr->radius, object_ptr->length);
           break;
         }
         default:
@@ -375,14 +389,15 @@ void KTOptPlanningContext::transcribePlanningScene(const planning_scene::Plannin
       }
 
       // Register the geometry in the scene graph.
-      const SourceId source_id = scene_graph.RegisterSource(shape_name);
-      const GeometryId geom_id = scene_graph.RegisterAnchoredGeometry(
-          source_id, std::make_unique<GeometryInstance>(RigidTransformd(pose), std::move(shape_ptr), shape_name));
+      const auto source_id = scene_graph.RegisterSource(shape_name);
+      const auto geom_id = scene_graph.RegisterAnchoredGeometry(
+          source_id, std::make_unique<drake::geometry::GeometryInstance>(drake::math::RigidTransformd(pose),
+                                                                         std::move(shape_ptr), shape_name));
 
       // add illustration, proximity, perception properties
-      scene_graph.AssignRole(source_id, geom_id, IllustrationProperties());
-      scene_graph.AssignRole(source_id, geom_id, ProximityProperties());
-      scene_graph.AssignRole(source_id, geom_id, PerceptionProperties());
+      scene_graph.AssignRole(source_id, geom_id, drake::geometry::IllustrationProperties());
+      scene_graph.AssignRole(source_id, geom_id, drake::geometry::ProximityProperties());
+      scene_graph.AssignRole(source_id, geom_id, drake::geometry::PerceptionProperties());
 
       // TODO: Create and anchor ground entity
     }
