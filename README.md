@@ -94,7 +94,7 @@ We use [pre-commit](https://moveit.ros.org/documentation/contributing/code/#pre-
 Within the container, you can run the following command to format the code:
 
 ```bash
-# inside the moveit_drake package
+cd src/moveit_drake
 pre-commit run -a
 ```
 
