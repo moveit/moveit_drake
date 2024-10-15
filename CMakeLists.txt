@@ -26,7 +26,7 @@ find_package(warehouse_ros REQUIRED)
 find_package(shape_msgs REQUIRED)
 
 generate_parameter_library(ktopt_moveit_parameters
-                           res/ktopt_moveit_parameters.yaml)
+                           parameters/ktopt_moveit_parameters.yaml)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
     ament_cmake
@@ -44,7 +44,7 @@ include_directories(include)
 # ktopt planning plugin
 add_library(
   moveit_drake SHARED
-  # KTOPT
+  # Kinematic Trajectory Optimization (KTOpt)
   src/ktopt_planner_manager.cpp
   src/ktopt_planning_context.cpp
   # TOPPRA

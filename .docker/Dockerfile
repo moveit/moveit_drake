@@ -19,7 +19,9 @@ RUN apt-get update && \
         ca-certificates \
         gnupg \
         lsb-release \
+        python3-pip \
         wget -y && \
+    pip3 install --break-system-packages pre-commit && \
     wget -qO- https://drake-apt.csail.mit.edu/drake.asc | gpg --dearmor - \
         | sudo tee /etc/apt/trusted.gpg.d/drake.gpg >/dev/null && \
     echo "deb [arch=amd64] https://drake-apt.csail.mit.edu/$(lsb_release -cs) $(lsb_release -cs) main" \

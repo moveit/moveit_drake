@@ -9,6 +9,7 @@ Programming interface within [Drake](https://drake.mit.edu/). This allows the
 user to setup motion planning as an optimization problem within ROS, with the
 rich specification of constraints and costs provided by `drake`.
 
+
 ## Features
 
 - Exposes
@@ -67,25 +68,39 @@ moveit):
     cd ${WORKSPACE}
     colcon build --event-handlers desktop_notification- status- --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers 1
 
-### Run the demo
 
-```
+## Examples
+
+The planning pipeline testbench compares `moveit_drake` planners with existing MoveIt planners such as OMPL and Pilz.
+
+```bash
 ros2 launch moveit_drake pipeline_testbench.launch.py
 ```
 
-### Development
+This interactive example shows constrained planning using the Drake KTOpt planner.
 
-- Use [pre-commit to format your
-  code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
+```bash
+ros2 launch moveit_drake constrained_planning_demo.launch.py
+```
 
-Within the container you can run the following command to format the code
 
-    # inside the moveit_drake package
-    pre-commit run -a
+## Development
+
+### Formatting
+
+Use [pre-commit to format your code](https://moveit.ros.org/documentation/contributing/code/#pre-commit-formatting-checks)
+
+Within the container, you can run the following command to format the code
+
+```bash
+# inside the moveit_drake package
+pre-commit run -a
+```
 
 ### Some helper commands
-To just rebuild `moveit_drake`
-```
+To just rebuild `moveit_drake`.
+
+```bash
 rm -rf build/moveit_drake install/moveit_drake
 colcon build --packages-select moveit_drake
 ```

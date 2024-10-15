@@ -16,6 +16,10 @@ rclcpp::Logger getLogger()
 {
   return moveit::getLogger("moveit.planners.ktopt.planner_manager");
 }
+
+/**
+ * @brief Implementation for the Drake Kinematic Trajectory Optimization (KTOpt) motion planner in MoveIt.
+ */
 class KTOptPlannerManager : public planning_interface::PlannerManager
 {
 public:
