@@ -53,7 +53,7 @@ public:
   /**
    * @brief Calculates a trajectory for the current request of this context.
    * @details This function just delegates to the common response.
-   * However, here the same trajectory is stored with the descriptions "plan","simplify", or "interpolate".
+   * However, here the same trajectory is stored with the descriptions "plan", "simplify", or "interpolate".
    * @param res The detailed result containing the respective trajectory, or error code on failure.
    */
   void solve(planning_interface::MotionPlanDetailedResponse& res) override;
