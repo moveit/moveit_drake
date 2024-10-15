@@ -90,6 +90,16 @@ public:
    */
   void addPathPositionConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
                                   Context<double>& plant_context, const double padding);
+
+  /**
+   * @brief Adds path orientation constraints, if any, to the planning problem.
+   * @param trajopt The Drake object containing the trajectory optimization problem.
+   * @param plant The Drake multibody plant to use for planning.
+   * @param plant_context The context associated with the multibody plant.
+   * @param padding Additional orientation padding on the MoveIt constraint, in radians.
+   * This ensures that constraints are more likely to hold for the entire trajectory, since the
+   * Drake mathematical program only optimizes constraints at discrete points along the path.
+   */
   void addPathOrientationConstraints(KinematicTrajectoryOptimization& trajopt, const MultibodyPlant<double>& plant,
                                      Context<double>& plant_context, const double padding);
 
