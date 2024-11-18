@@ -161,6 +161,7 @@ void KTOptPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // add collision constraints
   for (int s = 0; s < params_.num_collision_check_points; ++s)
   {
+    // The constraint will be evaluated as if it is bound with variables corresponding to r(s).
     trajopt.AddPathPositionConstraint(std::make_shared<drake::multibody::MinimumDistanceLowerBoundConstraint>(
                                           &plant, params_.collision_check_lower_distance_bound, &plant_context),
                                       static_cast<double>(s) / (params_.num_collision_check_points - 1));
@@ -375,7 +376,7 @@ void KTOptPlanningContext::setRobotDescription(const std::string& robot_descript
   const char* ModelUrl = params_.drake_robot_description.c_str();
   const std::string urdf = drake::multibody::PackageMap{}.ResolveUrl(ModelUrl);
   auto robot_instance = drake::multibody::Parser(&plant, &scene_graph).AddModels(urdf);
-  plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0"));
+  plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(params_.base_frame));
 
   // planning scene transcription
   const auto scene = getPlanningScene();
