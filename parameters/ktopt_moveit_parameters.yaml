@@ -4,6 +4,11 @@ ktopt_interface:
     description: "Robot description to be loaded by the internal Drake MultibodyPlant.",
     default_value: "package://drake_models/franka_description/urdf/panda_arm_hand.urdf",
   }
+  base_frame: {
+    type: string,
+    description: "Base frame of the robot that is attached to the ground.",
+    default_value: "panda_link0",
+  }
   num_iterations: {
     type: int,
     description: "Number of iterations for the Drake mathematical program solver.",
