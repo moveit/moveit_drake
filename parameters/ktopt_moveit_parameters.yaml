@@ -6,7 +6,7 @@ ktopt_interface:
   }
   base_frame: {
     type: string,
-    description: "Base frame of the robot that is attached to the ground.",
+    description: "Base frame of the robot that is attached to whatever the robot is mounted on.",
     default_value: "panda_link0",
   }
   num_iterations: {
