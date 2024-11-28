@@ -237,4 +237,20 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
     t_prev = t;
   }
 }
+
+std::string replaceSTLWithOBJ(const std::string& input)
+{
+  std::string result = input;
+  const std::string target = ".stl";
+  const std::string replacement = ".obj";
+
+  size_t pos = 0;
+  while ((pos = result.find(target, pos)) != std::string::npos)
+  {
+    result.replace(pos, target.length(), replacement);
+    pos += replacement.length();  // Move past the replacement to avoid infinite loop
+  }
+
+  return result;
+}
 }  // namespace moveit::drake

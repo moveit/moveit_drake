@@ -103,9 +103,6 @@ private:
   /// @brief The ROS parameters associated with this motion planner.
   const ktopt_interface::Params params_;
 
-  /// @brief The URDF robot description.
-  std::string robot_description_;
-
   /// @brief The Drake diagram describing the entire system.
   std::unique_ptr<Diagram<double>> diagram_;
 
