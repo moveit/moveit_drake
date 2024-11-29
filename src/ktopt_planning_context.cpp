@@ -1,4 +1,6 @@
 #include <cmath>
+#include <iostream>
+#include <string>
 
 #include <drake/geometry/meshcat_params.h>
 #include <drake/geometry/geometry_frame.h>
@@ -358,8 +360,6 @@ bool KTOptPlanningContext::terminate()
 
 void KTOptPlanningContext::setRobotDescription(const std::string& robot_description)
 {
-  robot_description_ = robot_description;
-
   // also perform some drake related initialisations here
   builder = std::make_unique<DiagramBuilder<double>>();
 
@@ -369,13 +369,11 @@ void KTOptPlanningContext::setRobotDescription(const std::string& robot_descript
 
   auto [plant, scene_graph] = drake::multibody::AddMultibodyPlantSceneGraph(builder.get(), 0.0);
 
-  // TODO:(kamiradi) Figure out object parsing
-  // auto robot_instance = Parser(plant_,
-  // scene_graph_).AddModelsFromString(robot_description_, ".urdf");
+  // Drake cannot handle stl files, so we convert them to obj. Make sure these files are available in your moveit config!
+  const auto description_with_obj = moveit::drake::replaceSTLWithOBJ(robot_description);
+  auto robot_instance =
+      drake::multibody::Parser(&plant, &scene_graph).AddModelsFromString(description_with_obj, ".urdf");
 
-  const char* ModelUrl = params_.drake_robot_description.c_str();
-  const std::string urdf = drake::multibody::PackageMap{}.ResolveUrl(ModelUrl);
-  auto robot_instance = drake::multibody::Parser(&plant, &scene_graph).AddModels(urdf);
   plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(params_.base_frame));
 
   // planning scene transcription

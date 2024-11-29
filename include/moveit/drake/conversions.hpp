@@ -147,4 +147,12 @@ getPiecewisePolynomial(const ::robot_trajectory::RobotTrajectory& robot_trajecto
 void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_trajectory, const double delta_t,
                         const ::drake::multibody::MultibodyPlant<double>& plant,
                         std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory);
+
+/**
+ * @brief Converts all STL file paths in a URDF string to OBJ file paths
+ *
+ * @param input Input robot description
+ * @return std::string Robot description with all STL file paths replaced by OBJ file paths
+ */
+[[nodiscard]] std::string replaceSTLWithOBJ(const std::string& input);
 }  // namespace moveit::drake

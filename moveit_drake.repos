@@ -13,8 +13,8 @@ repositories:
     version: main
   moveit_resources:
     type: git
-    url: https://github.com/moveit/moveit_resources
-    version: ros2
+    url: https://github.com/sjahr/moveit_resources
+    version: moveit_drake
   moveit_msgs:
     type: git
     url: https://github.com/moveit/moveit_msgs
