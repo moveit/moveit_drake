@@ -110,10 +110,12 @@ colcon build --packages-select moveit_drake
 
 ### .stl support
 
-Unfortunately, Drake does not support `.stl` files (11/28/2024, see [drake#19408](https://github.com/RobotLocomotion/drake/issues/19408)). We're working around this by replacing the `.stl` files in the urdf string
-with `.obj` files in the plugin implementations. Make sure that the moveit config you're using contains the relevant `.stl` files. If it doesn't,
-take a look into the scripts/ directory. We've provided a simple python script to add additional `.obj` files for given `.stl` files. Usage:
+Unfortunately, Drake does not support `.stl` files (11/28/2024, see [drake#19408](https://github.com/RobotLocomotion/drake/issues/19408)).
+We're working around this by replacing the `.stl` files in the urdf string with `.obj` files in the plugin implementations.
+Make sure that the moveit config you're using contains the relevant `.stl` files. If it doesn't, take a look into the scripts/ directory.
+We've provided a simple python script to add additional `.obj` files for given `.stl` files. Usage:
 
 ```
 ./scripts/convert_stl_to_obj.py /PATH/TO/YOUR/MESH/DIR
 ```
+Don't forget to rebuild your description package so the .obj files are copied into the workspace's install directory.

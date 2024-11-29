@@ -14,9 +14,11 @@ def convert_stl_to_obj(directory):
     """
     for root, _, files in os.walk(directory):
         for file in files:
-            if file.lower().endswith(".stl"):
-                stl_path = os.path.join(root, file)
-                obj_path = os.path.splitext(stl_path)[0] + ".obj"
+            stl_path = os.path.join(root, file)
+            file_root, file_ext = os.path.splitext(stl_path)
+
+            if file_ext.lower() in [".stl", ".STL"]:  # Check if the file is an STL file
+                obj_path = file_root + ".obj"  # Create the OBJ file path
 
                 try:
                     # Load the STL file

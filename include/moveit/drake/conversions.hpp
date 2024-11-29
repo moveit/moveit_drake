@@ -149,7 +149,7 @@ void getRobotTrajectory(const ::drake::trajectories::Trajectory<double>& drake_t
                         std::shared_ptr<::robot_trajectory::RobotTrajectory>& moveit_trajectory);
 
 /**
- * @brief Converts all STL file paths in a string to OBJ file paths
+ * @brief Converts all STL file paths in a URDF string to OBJ file paths
  *
  * @param input Input robot description
  * @return std::string Robot description with all STL file paths replaced by OBJ file paths
