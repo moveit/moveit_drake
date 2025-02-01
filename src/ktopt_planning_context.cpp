@@ -16,11 +16,11 @@
 #include <drake/visualization/visualization_config.h>
 #include <drake/visualization/visualization_config_functions.h>
 
-#include <moveit/constraint_samplers/constraint_sampler_manager.h>
+#include <moveit/constraint_samplers/constraint_sampler_manager.hpp>
 #include <moveit/drake/conversions.hpp>
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/robot_state/conversions.h>
+#include <moveit/planning_interface/planning_interface.hpp>
+#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/robot_state/conversions.hpp>
 
 #include <ktopt_interface/ktopt_planning_context.hpp>
 

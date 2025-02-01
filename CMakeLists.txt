@@ -78,7 +78,8 @@ install(
   DESTINATION include/drake)
 
 ament_export_targets(moveit_drakeTargets HAS_LIBRARY_TARGET)
-ament_export_dependencies(moveit_core drake::drake generate_parameter_library)
+ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS} drake
+                          generate_parameter_library)
 
 add_subdirectory(demo)
 

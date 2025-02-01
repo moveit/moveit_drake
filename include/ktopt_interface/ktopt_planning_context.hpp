@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ktopt_moveit_parameters.hpp>
-#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_interface/planning_interface.hpp>
+#include <moveit_drake/ktopt_moveit_parameters.hpp>
 #include <shape_msgs/msg/solid_primitive.h>
 
 // relevant drake includes
