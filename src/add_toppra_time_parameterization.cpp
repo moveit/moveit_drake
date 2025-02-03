@@ -37,7 +37,7 @@
 */
 
 #include <moveit/drake/conversions.hpp>
-#include <moveit/planning_interface/planning_response_adapter.h>
+#include <moveit/planning_interface/planning_response_adapter.hpp>
 #include <class_loader/class_loader.hpp>
 #include <moveit/utils/logger.hpp>
 

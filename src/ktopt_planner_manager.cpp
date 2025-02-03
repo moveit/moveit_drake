@@ -1,7 +1,7 @@
 #include <memory>
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit/planning_interface/planning_response.h>
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_interface/planning_interface.hpp>
+#include <moveit/planning_interface/planning_response.hpp>
+#include <moveit/planning_scene/planning_scene.hpp>
 #include <moveit/utils/logger.hpp>
 #include <class_loader/class_loader.hpp>
 #include <rclcpp/node.hpp>

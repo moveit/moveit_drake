@@ -36,8 +36,8 @@
    Desc: TODO
 */
 
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/robot_trajectory/robot_trajectory.hpp>
 
 #include <drake/multibody/parsing/parser.h>
 #include <drake/geometry/scene_graph.h>
