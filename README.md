@@ -85,6 +85,24 @@ ros2 launch moveit_drake constrained_planning_demo.launch.py
 ```
 
 
+## Configuration
+
+### Use another robot
+
+By default, Drake uses descriptions located within the [drake_models](https://github.com/RobotLocomotion/models) package. Modify the `drake_robot_description` parameter if you want to use a different description:
+```yaml
+drake_robot_description: "package://drake_models/pr2_description/urdf/pr2_simplified.urdf"
+```
+
+In case you want to use other robots, you can specify the global path to the description package using the `external_robot_description` parameter:
+```yaml
+external_robot_description: ["/home/user/xarm_ws/src/xarm_ros2/xarm_description"]
+```
+Drake will crawl down the directory tree starting at the given path. You can also specify multiple paths in the array.
+
+If you already provide the transform `world->base_frame` you might also want to leave the parameter `base_frame` empty.
+
+
 ## Development
 
 ### Formatting
