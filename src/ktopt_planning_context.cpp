@@ -371,10 +371,15 @@ void KTOptPlanningContext::setRobotDescription(const std::string& robot_descript
 
   // Drake cannot handle stl files, so we convert them to obj. Make sure these files are available in your moveit config!
   const auto description_with_obj = moveit::drake::replaceSTLWithOBJ(robot_description);
-  auto robot_instance =
-      drake::multibody::Parser(&plant, &scene_graph).AddModelsFromString(description_with_obj, ".urdf");
+  auto robot_instance = drake::multibody::Parser(&plant, &scene_graph);
 
-  plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(params_.base_frame));
+  for (const auto& path : params_.external_robot_description)
+    robot_instance.package_map().PopulateFromFolder(path);
+
+  robot_instance.AddModelsFromString(description_with_obj, ".urdf");
+
+  if (!params_.base_frame.empty())
+    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(params_.base_frame));
 
   // planning scene transcription
   const auto scene = getPlanningScene();

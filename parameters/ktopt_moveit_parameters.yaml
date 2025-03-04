@@ -4,9 +4,14 @@ ktopt_interface:
     description: "Robot description to be loaded by the internal Drake MultibodyPlant.",
     default_value: "package://drake_models/franka_description/urdf/panda_arm_hand.urdf",
   }
+  external_robot_description: {
+    type: string_array,
+    description: "If your robot description is not available within the drake_models package, you can specify an array of global paths to search for the URDFs.",
+    default_value: [],
+  }
   base_frame: {
     type: string,
-    description: "Base frame of the robot that is attached to whatever the robot is mounted on.",
+    description: "Base frame of the robot that is attached to whatever the robot is mounted on. Leave it empty in case you already provide the transform.",
     default_value: "panda_link0",
   }
   num_iterations: {
