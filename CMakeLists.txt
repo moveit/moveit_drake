@@ -24,6 +24,7 @@ find_package(rclcpp REQUIRED)
 find_package(rviz_visual_tools REQUIRED)
 find_package(warehouse_ros REQUIRED)
 find_package(shape_msgs REQUIRED)
+find_package(ros2_control REQUIRED)
 
 generate_parameter_library(ktopt_moveit_parameters
                            parameters/ktopt_moveit_parameters.yaml)
@@ -59,7 +60,8 @@ ament_target_dependencies(
   moveit_msgs
   pluginlib
   rclcpp
-  shape_msgs)
+  shape_msgs
+  ros2_control)
 target_link_libraries(moveit_drake drake::drake ktopt_moveit_parameters)
 
 # Ensure that the plugin finds libdrake.so at runtime
